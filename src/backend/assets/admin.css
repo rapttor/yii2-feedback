@@ -1,0 +1,26 @@
+.fbx { margin: 0; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; background: #f5f6f8; color: #1f2328; }
+.fbx-top { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: #1f2937; }
+.fbx-top a { color: #fff; text-decoration: none; }
+.fbx-brand { font-weight: 700; }
+.fbx-main { max-width: 1200px; margin: 0 auto; padding: 20px; }
+.fbx h1 { margin: .2em 0 .6em; font-size: 1.5rem; } .fbx h1 small, .fbx h2 small { color: #6b7280; font-weight: 400; font-size: .8em; }
+.fbx h2 { font-size: 1.05rem; margin: 1.4em 0 .5em; } .fbx h3 { font-size: .95rem; margin: 1em 0 .3em; }
+.fbx a { color: #2f6fed; }
+.fbx-tabs a { display: inline-block; margin: 0 6px 6px 0; padding: 3px 10px; border-radius: 999px; background: #e5e7eb; color: #374151; text-decoration: none; font-size: .85rem; }
+.fbx-tabs a.on { background: #2f6fed; color: #fff; }
+.fbx-filter { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 14px; } .fbx-filter input, .fbx-filter select, .fbx-filter button { font: inherit; padding: 5px 8px; }
+.fbx-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; font-size: .9rem; }
+.fbx-table th, .fbx-table td { padding: 7px 10px; border-bottom: 1px solid #eceff3; text-align: left; vertical-align: top; }
+.fbx-table th { background: #f0f2f5; font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; color: #6b7280; }
+.fbx-table tr.p3 td:first-child { border-left: 4px solid #c62828; } .fbx-table tr.p2 td:first-child { border-left: 4px solid #f59e0b; }
+.fbx-empty, .fbx-muted { color: #6b7280; } .fbx-bad { color: #c62828; }
+.fbx-st { padding: 2px 8px; border-radius: 999px; background: #e5e7eb; font-size: .8rem; } .fbx-st-new { background: #dbeafe; } .fbx-st-resolved, .fbx-st-closed { background: #dcfce7; }
+.fbx-tag { color: #2f6fed; }
+.fbx-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr); gap: 24px; } @media (max-width: 900px) { .fbx-grid { grid-template-columns: 1fr; } }
+.fbx-msg { margin: 0 0 14px; padding: 14px 16px; background: #fff; border-left: 4px solid #2f6fed; border-radius: 6px; font-size: 1.05rem; }
+.fbx-dl { display: grid; grid-template-columns: 8rem 1fr; gap: 4px 12px; margin: 0; } .fbx-dl dt { color: #6b7280; } .fbx-dl dd { margin: 0; word-break: break-word; }
+.fbx-form { display: grid; gap: 8px; } .fbx-form textarea, .fbx-form select, .fbx-form button { font: inherit; padding: 6px 8px; } .fbx-form button { cursor: pointer; }
+.fbx-note { background: #fff; padding: 8px 10px; border-radius: 6px; margin-bottom: 8px; font-size: .9rem; } .fbx-note-event { background: transparent; color: #6b7280; padding: 2px 10px; } .fbx-note-reply { border-left: 3px solid #16a34a; }
+.fbx-flash { padding: 8px 12px; border-radius: 6px; } .fbx-success { background: #dcfce7; } .fbx-error { background: #fee2e2; }
+.pagination { list-style: none; display: flex; gap: 4px; padding: 0; } .pagination a, .pagination span { padding: 3px 9px; background: #fff; border-radius: 4px; text-decoration: none; display: inline-block; }
+.pagination .active a { background: #2f6fed; color: #fff; }
