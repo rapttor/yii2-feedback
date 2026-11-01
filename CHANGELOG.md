@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1 - 2026-11-01
+
+- The preference cookie follows the Rapttor cookie rules: set a name unique per app (`cookie => 'fb-' . APP_SLUG`), `SameSite=Lax` and `Secure` only on https (none on plain-http dev hosts).
+- Docs: README configuration example, AGENTS.md.
+
 ## 0.1.0 - 2026-11-01 (beta)
 
 - Component `feedback`, shared tables `rapttor_feedback`, `_note`, `_snapshot`, migration in `rapttor\yii2feedback\migrations`.

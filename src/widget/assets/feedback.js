@@ -73,7 +73,7 @@
   }
   function setPref(p) {
     var v = Object.keys(p).filter(function (k) { return p[k] !== '' && p[k] !== undefined && p[k] !== null; }).map(function (k) { return k + '=' + p[k]; }).join('&');
-    document.cookie = cfgCookie() + '=' + encodeURIComponent(v) + '; path=/; max-age=31536000; SameSite=Lax' + (location.protocol === 'https:' ? '; Secure' : '');
+    document.cookie = cfgCookie() + '=' + encodeURIComponent(v) + '; path=/; max-age=31536000' + (location.protocol === 'https:' ? '; SameSite=Lax; Secure' : '');
   }
   function cfgCookie() { return (root && root.dataset.cookie) || 'rapttor_fb'; }
 

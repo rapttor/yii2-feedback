@@ -51,7 +51,7 @@ Register the component in the web **and** console config. Only `class` and `app`
         // storage and retention
         // 'snapshotDays' => 30,                  // delete screen data after N days (0 = keep)
         // 'messageDays' => 0,                    // delete whole feedback after N days (0 = keep)
-        // 'cookie' => 'rapttor_fb',              // preference cookie: button closed + position
+        // 'cookie' => 'fb-my-app',               // preference cookie: button closed + position; unique per app (default 'rapttor_fb')
         // 'secret' => null,                      // key for IP hashes and tokens; default: the request's cookieValidationKey
         // 'db' => 'db', 'table' => 'rapttor_feedback', 'noteTable' => 'rapttor_feedback_note', 'snapshotTable' => 'rapttor_feedback_snapshot',
     ],
@@ -76,7 +76,7 @@ The same options, explained. All keys are public properties of `Feedback`; the v
 | `types` | error, idea, report, other | types and their options (`subtypes`, `rating`, `picker`, `snapshot`, `emailRequired`, `priority`); texts are `type.<t>`, `sub.<t>.<s>` in the message files |
 | `excludeRoutes` | `['feedback/*']` | route patterns (`*` allowed) where the widget is **not offered at all** (no button, dialog or links); `feedback/*` is always out |
 | `hiddenRoutes` | `[]` | route patterns where **only the floating button** is hidden; links and `Feedback.open()` still work |
-| `cookie` | `'rapttor_fb'` | preference cookie: button closed + position (list it as a preference cookie in your legal texts) |
+| `cookie` | `'rapttor_fb'` | preference cookie: button closed + position. **Set a name unique per app** (cookies ignore the port), e.g. `'fb-' . APP_SLUG`, and list it as a preference cookie in your legal texts |
 | `captureMode` | `'all'` | `all`: everything not masked; `marked`: only inside `data-feedback-capture` |
 | `maskEmails` | `false` | `true`: emails inside screen data become `[email]` (recommended for public use) |
 | `languageSelector` | `'auto'` | `auto`: dropdown in the dialog only when the app has no language choice of its own; `always`; `never` |
