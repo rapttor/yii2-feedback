@@ -6,7 +6,7 @@ Audience for v1: **beta testers** sending suggestions, ideas and errors. The onl
 
 ## 1. Scope
 
-In v1: widget (closable floating button, menu/method trigger), context + page-text capture, storage, light rate limiting, inbox module (list, detail, status, notes, one-way reply email), export and deletion per account, retention.
+In v1: widget (closable floating button, menu/method trigger), technical context and an explicitly consented page snapshot, storage, rate limits + proof of work for visitors, inbox module (list, detail, status, notes, one-way reply email), export and deletion per account, retention.
 Later: screenshots, conversation threads, SLA/automation rules, legal handoff for `report`, Slack/Linear webhooks, embeddable script for external sites.
 
 ## 2. Package shape: a mini app inside
@@ -19,10 +19,10 @@ src/
   Bootstrap.php           web: public routes; console: commands + migration namespace
   Schema.php, migrations/
   widget/                 Widget.php + assets/ (feedback.js, feedback.css, no CDN)
-  controllers/            public: SubmitController (JSON), ConfigController
+  controllers/            public FeedbackController: GET config, POST submit (JSON)
   backend/Module.php      the inbox: own controllers, views, layout, CSS
   console/FeedbackController.php   purge
-  messages/<lang>.php   17 languages, the set of the shared registry
+  messages/<lang>.php   22 languages, the set of the shared registry
 ```
 
 - The backend module has its **own layout and styles**; it only borrows the host's `user`, `db`, `mailer`. Option `layout` lets an app use its own layout instead.
@@ -84,6 +84,7 @@ No reply-time promise in any confirmation text (owner rule).
 Vanilla JS + CSS, no jQuery, no CDN (CSP-safe), CSS variables so `yii2-themes` colours apply.
 
 - **Floating button**: draggable (mouse + touch), edge snap, keyboard-focusable, reduced-motion aware, small close "x".
+  - Page rules: `excludeRoutes` removes the widget completely on matching routes; `hiddenRoutes` hides only the floating button there (links and `Feedback.open()` still work). The widget is site-wide by default (legal and sign-in pages included).
   - Closing sets cookie **`rapttor_fb`** (`SameSite=Lax`, path `/`, one year; holds hidden flag and button position). The server reads it and does not render the button, so there is no flash. It is a preference cookie: list it in `yii2-legal`'s cookie list.
   - **`Feedback.open({type})`** and `data-feedback-open` (menu item) always work, cookie or not.
   - **`Feedback.show()`** / PHP `Feedback::showButton()` clears the cookie and brings the button back: the hook for an app's "show feedback button" menu option.
@@ -92,10 +93,10 @@ Vanilla JS + CSS, no jQuery, no CDN (CSP-safe), CSS variables so `yii2-themes` c
   - **Consent checkbox** "Include what's on my screen" (messages, form values, tables): **unchecked by default, never pre-ticked**, ticking it expands a preview of exactly what is sent with a toggle per part; the small print says passwords and card data are never included and what it is used for,
   - "Include technical details" (browser, screen size, recent errors): **ticked by default** (no screen content), can be unticked.
 - Draft kept in `localStorage` until sent or discarded. Bottom sheet on phones. Focus trap, `Esc`, labels, contrast. Warm, short thank-you.
-- **Languages (17)**: the shared registry `rapttor.legal/i18n/languages.json`: en, sh (Balkan), de, fr, es, pt-BR, it, pl, nl, tr, uk, ru, ar, hi, ja, ko, zh-Hans. The app's language is resolved with the registry's aliases (`sh` lists sr, sr-Latn, sr-Cyrl, hr, bs, cnr and regional variants; `de-AT`, `fr-CA`, `es-MX` map to their base); anything else falls back to `en`. The package bundles a small copy of the codes + aliases (no hard dependency on `rapttor/legal`). Swedish (`sv`) is not in the registry; it is an optional addition (see TASKS.md *Later*). Balkan wording rules for `sh` (fajl, dodajem, sistem, no country markers, short checkbox titles).
-  - Language = the app's selected language (`Yii::$app->language`, or the app's own switcher). A small language dropdown in the dialog appears only when the app has no selection of its own; config `languageSelector`: `auto` (default) / `always` / `never`. The choice affects the dialog only, not the app.
+- **Languages (22)**, the shared registry `rapttor.legal/i18n/languages.json`: en, sh (Balkan), de, fr, es, es-MX, pt-BR, it, pl, nl, tr, sv, ro, id, vi, uk, ru, ar, hi, ja, ko, zh-Hans. The app's language is resolved with the registry's aliases (`sh` lists sr, sr-Latn, sr-Cyrl, hr, bs, cnr and regional variants; `de-AT`, `fr-CA` map to their base); anything else falls back to `en`. `es-MX` only overrides a few keys of `es`. The package bundles a small copy of the codes + aliases (no hard dependency on `rapttor/legal`). Balkan wording rules for `sh` (fajl, dodajem, sistem, no country markers, short checkbox titles). The 20 non-English, non-Balkan files are machine translations that still need a human review.
+  - Which language: `languageResolver` if set, else the `legal` component's current language (its switcher choice) when present, else `Yii::$app->language`. A small language dropdown in the dialog appears only when the app has no selection of its own; `languageSelector`: `auto` (default) / `always` / `never`. The choice affects the dialog only, not the app.
   - Covers widget texts, type/option labels, the confirmation and the reply email (sender's `locale`, English fallback). The user's message may be in any language. Arabic is right-to-left: CSS uses logical properties and the dialog sets `dir`.
-  - A test fails if any language file lacks a key present in `en`. The inbox is English.
+  - A test fails if any language file lacks a key present in `en`, or `sh` contains a banned national-marker word. The inbox is English.
 
 ## 7. Page snapshot (forms, messages, tables)
 
@@ -118,7 +119,7 @@ Masking and control:
 - The user sees exactly what is sent (preview with a toggle per part) before sending.
 - The server masks again, enforces size caps, and stores plain data; it is shown encoded, never as HTML.
 - Retention `snapshotDays` (default 30), deleted separately from the feedback row and with the account.
-- The widget is not offered on `/admin` routes by default (tables there can show other people's data).
+- Pages where the snapshot (or the whole widget) is unwanted: `excludeRoutes` / `hiddenRoutes`, or mark regions with `data-feedback-hide`. The backoffice does not render the widget (it is in the frontend layout only).
 - Screenshots stay in *Later*.
 
 ## 8. Rate limiting and spam (light)
@@ -127,10 +128,9 @@ Counters computed from `rapttor_feedback` itself; per profile and per `ip_hash`:
 
 ## 9. Inbox module
 
-- Access: role `admin` only (`allowedRoles`, default `['admin']`, checked on every action). No other roles in v1.
-- List: filters (status, type, app, audience, rating, route, date), search, bulk status/close, counts per status.
-- Detail: message, context, picked element, snapshot, reporter link, duplicates, timeline, status, priority, **reply by email** (Postar, one-way; recorded as a `reply` note), internal notes.
-- Small stats page: volume per type/day, average rating, top routes, top JS errors.
+- Access: the module's `permission` (default role `admin`), checked on every action. No other roles in v1.
+- **Built:** list with status tabs and counts, filters (type, app, text), detail (message, technical details, picked element, snapshot with consent time and wording version, notes timeline), status and priority with a revision check, internal notes, **reply by email** (through the app's mailer, so Postar when `MAIL_DSN` is `postar://`; recorded as a `reply` note).
+- **Not built yet:** filters by audience/rating/route/date, bulk status/close, duplicates view, stats page (volume, ratings, top routes and JS errors).
 - Every change writes an `event` note. Output always encoded.
 
 ## 10. Beta vs customers
@@ -146,17 +146,20 @@ Counters computed from `rapttor_feedback` itself; per profile and per `ip_hash`:
 
 1. `composer require rapttor/yii2-feedback`; `feedback` component in web **and** console config; `rapttor\yii2feedback\migrations` in `migrationNamespaces`; `php yii migrate`.
 2. Frontend layout: `<?= \rapttor\yii2feedback\widget\Widget::widget() ?>` once.
-3. Backend: `'modules' => ['feedback' => ['class' => \rapttor\yii2feedback\backend\Module::class]]` (access: role `admin` only, via the module's `allowedRoles`, default `['admin']`).
+3. Backend: `'modules' => ['feedback' => ['class' => \rapttor\yii2feedback\backend\Module::class, 'permission' => 'admin']]`.
 4. Menu option: `data-feedback-open` on a link; "show feedback button" calls `Feedback.show()`.
 5. Account deletion/export call `anonymiseProfile` / `export`; cron runs `feedback/purge`.
 6. Agent rules: no raw SQL on the table; never render `message`, `context` or the snapshot unencoded, and read the snapshot only through the single snapshot reader.
 
-## 13. Still open
+## 13. Decisions (settled)
 
-1. **Decided:** the button shows for anonymous visitors too (`guests` defaults to true): optional email, stricter limits, hashed IP only.
-2. Mount the inbox in **one** hub backend (all apps), or in each app's backend?
-3. Reply email `From`: the Postar sender configured per app, or one shared feedback address?
-4. `captureMode`: `all` with masking for beta (proposed); table limit 20 rows x 15 columns.
+1. The button shows for anonymous visitors too (`guests`, default true): optional email, stricter limits, proof of work, hashed IP only.
+2. One hub inbox: mount the module in one backend; rows carry `app`.
+3. Reply email uses the app's mailer; `From` = `replyFrom`, else `params['senderEmail' | 'supportEmail' | 'adminEmail']`; none = the reply fails cleanly.
+4. `captureMode` `all` with masking for beta; emails kept (`maskEmails` false), switch on for public use; tables 20 rows x 15 columns.
+5. Widget site-wide, legal and sign-in pages included; per-page control with `excludeRoutes` / `hiddenRoutes`.
+
+Still open: the `feedback` clause in the `rapttor/legal` templates (22 languages, lawyer review); `report` handoff to `yii2-legal` requests; account-deletion wiring in apps that have it.
 
 ## 14. Later: operators / delegation
 

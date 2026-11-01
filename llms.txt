@@ -1,6 +1,6 @@
 # rapttor/yii2-feedback
 
-> Yii2 extension: feedback widget (closable floating button, menu trigger, consented screen snapshot, 22 languages) plus a small admin inbox. One shared table `rapttor_feedback` (+ notes, snapshots).
+> Yii2 extension: feedback widget (closable floating button, menu trigger, consented screen snapshot, proof of work for visitors, 22 languages) plus a small admin inbox. One shared table `rapttor_feedback` (+ notes, snapshots). Reply emails go through the app's mailer (Postar via `MAIL_DSN`).
 
 Integrating or changing this package: read AGENTS.md first.
 
