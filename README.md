@@ -8,13 +8,52 @@ Feedback for Yii2 apps, between a contact form and a helpdesk. A closable floati
 composer require rapttor/yii2-feedback
 ```
 
-Register the component in the web **and** console config:
+Register the component in the web **and** console config. Only `class` and `app` are needed; everything else shows its default and can be left out:
 
 ```php
 'components' => [
     'feedback' => [
         'class' => \rapttor\yii2feedback\Feedback::class,
-        'app' => 'my-app',   // rows carry the app; the tables are shared by all Rapttor apps on the database
+        'app' => 'my-app',                        // which app sends; the tables are shared by all Rapttor apps on the database
+
+        // who and where
+        // 'guests' => true,                      // false = signed-in users only
+        // 'excludeRoutes' => ['feedback/*'],     // no widget at all on these routes (patterns, * allowed); feedback/* is always out
+        // 'hiddenRoutes' => [],                  // only the floating button is hidden there; links and Feedback.open() still work, e.g. ['shop/checkout*']
+
+        // what can be sent
+        // 'types' => [                           // type => options; labels are in the message files: type.<t>, sub.<t>.<s>
+        //     'error'  => ['subtypes' => ['not_working', 'page_load', 'wrong_result', 'slow', 'display', 'other'], 'rating' => false, 'picker' => true,  'snapshot' => true,  'emailRequired' => false, 'priority' => 1],
+        //     'idea'   => ['subtypes' => ['new_feature', 'improve', 'other'],                                      'rating' => true,  'picker' => false, 'snapshot' => true,  'emailRequired' => false, 'priority' => 0],
+        //     'report' => ['subtypes' => ['infringement', 'dmca', 'picture', 'offensive', 'other'],                'rating' => false, 'picker' => false, 'snapshot' => false, 'emailRequired' => true,  'priority' => 3],
+        //     'other'  => ['subtypes' => [],                                                                       'rating' => true,  'picker' => false, 'snapshot' => true,  'emailRequired' => false, 'priority' => 0],
+        // ],
+        // 'captureMode' => 'all',                // all = everything not masked; marked = only inside data-feedback-capture
+        // 'maskEmails' => false,                 // true = emails inside screen data become [email] (recommended for public use)
+        // 'release' => '',                       // tag added to the technical details, e.g. '2026.11.1'
+
+        // spam and limits (off in development)
+        // 'limitsEnabled' => null,               // null = on except YII_ENV_DEV; true / false to force
+        // 'limits' => ['hour' => 10, 'day' => 30, 'anon_hour' => 3, 'anon_day' => 10],   // per profile / per hashed IP
+        // 'minSeconds' => 3,                     // the dialog must be open this long before sending
+        // 'proofOfWork' => 18,                   // bits of work asked from visitors (0 = off); needs a `cache` component
+
+        // language
+        // 'languageSelector' => 'auto',          // auto = dropdown only when the app has no language choice of its own | always | never
+        // 'languageResolver' => fn () => 'de',   // default: the `legal` component's language, else Yii::$app->language
+
+        // people and replies
+        // 'profileResolver' => fn () => Yii::$app->user->id,        // signed-in id or null
+        // 'audienceResolver' => fn ($id) => 'beta',                 // beta | customer
+        // 'emailResolver' => fn ($id) => User::findOne($id)?->email, // default: the identity's `email`
+        // 'replyFrom' => 'support@example.com',  // else params senderEmail / supportEmail / adminEmail
+
+        // storage and retention
+        // 'snapshotDays' => 30,                  // delete screen data after N days (0 = keep)
+        // 'messageDays' => 0,                    // delete whole feedback after N days (0 = keep)
+        // 'cookie' => 'rapttor_fb',              // preference cookie: button closed + position
+        // 'secret' => null,                      // key for IP hashes and tokens; default: the request's cookieValidationKey
+        // 'db' => 'db', 'table' => 'rapttor_feedback', 'noteTable' => 'rapttor_feedback_note', 'snapshotTable' => 'rapttor_feedback_snapshot',
     ],
 ],
 ```
@@ -26,9 +65,9 @@ Register the component in the web **and** console config:
 - Visitors need a `cache` component (proof of work: each token works once).
 - Cron: `php yii feedback/purge` (retention).
 
-## Configuration
+## Configuration reference
 
-All keys are public properties of `Feedback`; the values shown are the defaults.
+The same options, explained. All keys are public properties of `Feedback`; the values shown are the defaults.
 
 | Key | Default | Meaning |
 |---|---|---|
