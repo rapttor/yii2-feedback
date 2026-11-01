@@ -53,7 +53,7 @@ final class Widget extends BaseWidget
                 'lang' => $lang,
                 'languages' => json_encode(array_intersect_key(Languages::NAMES, array_flip(Languages::codes())), JSON_UNESCAPED_UNICODE),
                 'selector' => $selector ? '1' : '0',
-                'hidden' => !empty($pref['h']) ? '1' : '0',
+                'hidden' => !empty($pref['h']) || $f->routeHidden($route) ? '1' : '0',
                 'cookie' => $f->cookie,
                 'csrf-param' => Yii::$app->request->csrfParam,
                 'csrf' => Yii::$app->request->getCsrfToken(),

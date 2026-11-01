@@ -28,7 +28,7 @@ Web **and** console config:
 Console: `rapttor\yii2feedback\migrations` is added to `migrationNamespaces` by the extension bootstrap; run `php yii migrate`.
 Frontend layout, once: `<?= \rapttor\yii2feedback\widget\Widget::widget() ?>`
 Backend: `'modules' => ['feedback' => ['class' => \rapttor\yii2feedback\backend\Module::class, 'permission' => 'admin']]`, then open `/feedback`.
-If you use a consent gate, exempt the route `feedback/*`. The widget is site-wide; hide it on chosen pages with `'excludeRoutes' => ['checkout/*']` (patterns on the route; `feedback/*` is always kept out).
+If you use a consent gate, exempt the route `feedback/*`. The widget is site-wide. On chosen pages (patterns on the route, `*` allowed): `'hiddenRoutes' => ['shop/checkout*']` hides only the floating button, the menu link and `Feedback.open()` still work; `'excludeRoutes' => ['admin/*']` removes the widget completely (`feedback/*` is always kept out).
 
 ## Use
 

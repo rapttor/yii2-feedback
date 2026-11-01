@@ -315,6 +315,16 @@ final class FeedbackTest extends TestCase
         }
     }
 
+    public function testHiddenRoutesOnlyHideTheButton(): void
+    {
+        $f = $this->fb(['hiddenRoutes' => ['shop/checkout*'], 'excludeRoutes' => ['admin/*']]);
+        $this->assertTrue($f->routeHidden('shop/checkout-step'));
+        $this->assertFalse($f->routeExcluded('shop/checkout-step'), 'hidden is not excluded: the link still works');
+        $this->assertTrue($f->routeExcluded('admin/users'));
+        $this->assertTrue($f->routeExcluded('feedback/submit'), 'its own routes are always out');
+        $this->assertFalse($f->routeHidden('site/index'));
+    }
+
     public function testRouteExclusion(): void
     {
         $f = $this->fb();

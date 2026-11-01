@@ -66,7 +66,9 @@ class Feedback extends Component
     public string $languageSelector = 'auto';
     /** Show the button to visitors who are not signed in (they can leave an email; limits are stricter). */
     public bool $guests = true;
-    /** Routes (patterns with *) where the widget is not offered. */
+    /** Routes (patterns with *) where only the floating button is hidden; menu links and Feedback.open() still work there. */
+    public array $hiddenRoutes = [];
+    /** Routes (patterns with *) where the widget is not offered at all (no button, no dialog, no links).
     public array $excludeRoutes = ['feedback/*'];
     /** Preference cookie holding the "button closed" flag and its position. */
     public string $cookie = 'rapttor_fb';
@@ -128,7 +130,17 @@ class Feedback extends Component
 
     public function routeExcluded(string $route): bool
     {
-        foreach ([...$this->excludeRoutes, 'feedback/*'] as $pattern) {
+        return $this->routeMatches([...$this->excludeRoutes, 'feedback/*'], $route);
+    }
+
+    public function routeHidden(string $route): bool
+    {
+        return $this->routeMatches($this->hiddenRoutes, $route);
+    }
+
+    private function routeMatches(array $patterns, string $route): bool
+    {
+        foreach ($patterns as $pattern) {
             if (fnmatch($pattern, trim($route, '/'))) {
                 return true;
             }
