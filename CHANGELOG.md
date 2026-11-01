@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.0 - 2026-11-01 (beta)
 
 - Component `feedback`, shared tables `rapttor_feedback`, `_note`, `_snapshot`, migration in `rapttor\yii2feedback\migrations`.
 - Public JSON endpoints (`feedback/config`, `feedback/submit`), widget (draggable closable button with cookie `rapttor_fb`, dialog, element picker, consented snapshot with preview, recent JS errors and failed requests), `data-feedback-open` and `Feedback.open/show/hide`.
