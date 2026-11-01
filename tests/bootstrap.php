@@ -16,6 +16,7 @@ new yii\web\Application([
     'basePath' => __DIR__,
     'aliases' => ['@rapttor/yii2feedback' => dirname(__DIR__) . '/src'],
     'components' => [
+        'cache' => ['class' => yii\caching\ArrayCache::class],
         'db' => ['class' => yii\db\Connection::class, 'dsn' => 'sqlite::memory:'],
         'request' => ['cookieValidationKey' => 'x', 'scriptUrl' => '/index.php', 'baseUrl' => ''],
         'user' => ['class' => yii\web\User::class, 'identityClass' => rapttor\yii2feedback\tests\TestIdentity::class, 'enableSession' => false],

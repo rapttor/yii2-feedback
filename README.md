@@ -18,6 +18,8 @@ Web **and** console config:
         // 'replyFrom' => 'support@example.com', // else params senderEmail / supportEmail / adminEmail
         // 'captureMode' => 'all',               // all | marked (only inside data-feedback-capture)
         // 'guests' => true,                     // false = signed-in users only
+        // 'proofOfWork' => 18,                  // bits of work asked from visitors before sending (0 = off); needs a `cache` component; off in dev
+        // 'maskEmails' => false,                // true = emails in screen data become [email]
         // 'languageSelector' => 'auto',         // auto | always | never
     ],
 ],
@@ -26,7 +28,7 @@ Web **and** console config:
 Console: `rapttor\yii2feedback\migrations` is added to `migrationNamespaces` by the extension bootstrap; run `php yii migrate`.
 Frontend layout, once: `<?= \rapttor\yii2feedback\widget\Widget::widget() ?>`
 Backend: `'modules' => ['feedback' => ['class' => \rapttor\yii2feedback\backend\Module::class, 'permission' => 'admin']]`, then open `/feedback`.
-If you use a consent gate, exempt the route `feedback/*`.
+If you use a consent gate, exempt the route `feedback/*`. The widget is site-wide; hide it on chosen pages with `'excludeRoutes' => ['checkout/*']` (patterns on the route; `feedback/*` is always kept out).
 
 ## Use
 

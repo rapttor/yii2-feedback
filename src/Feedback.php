@@ -50,9 +50,16 @@ class Feedback extends Component
     /** Limits per sender: hour/day for signed-in users, anon_* for visitors. null = off in development only. */
     public ?bool $limitsEnabled = null;
     public array $limits = ['hour' => 10, 'day' => 30, 'anon_hour' => 3, 'anon_day' => 10];
+    /**
+     * Proof of work for visitors who are not signed in: the browser must find a nonce so that sha256(token:nonce) starts with this many
+     * zero bits (about 2^bits tries: ~0.2 s at 18 on a laptop, a few seconds on a phone, solved while the person types). Makes scripted floods costly without an external CAPTCHA. 0 = off. Off in development.
+     */
+    public int $proofOfWork = 18;
     /** Seconds the dialog must have been open before sending (bots send at once). */
     public int $minSeconds = 3;
 
+    /** Mask email addresses inside the screen data. Off: the admin sees emails in contact forms anyway. Turn on for public use. Passwords, token/secret/card fields and card-like numbers are always masked. */
+    public bool $maskEmails = false;
     /** all = capture everything not masked; marked = only inside data-feedback-capture. */
     public string $captureMode = 'all';
     /** auto = dropdown only when the app has no language of its own; always; never. */
@@ -60,7 +67,7 @@ class Feedback extends Component
     /** Show the button to visitors who are not signed in (they can leave an email; limits are stricter). */
     public bool $guests = true;
     /** Routes (patterns with *) where the widget is not offered. */
-    public array $excludeRoutes = ['site/login', 'site/logout', 'legal/*', 'feedback/*', 'auth/*'];
+    public array $excludeRoutes = ['feedback/*'];
     /** Preference cookie holding the "button closed" flag and its position. */
     public string $cookie = 'rapttor_fb';
     /** Free text added to every row's technical details (a version or release tag). */
@@ -121,7 +128,7 @@ class Feedback extends Component
 
     public function routeExcluded(string $route): bool
     {
-        foreach ($this->excludeRoutes as $pattern) {
+        foreach ([...$this->excludeRoutes, 'feedback/*'] as $pattern) {
             if (fnmatch($pattern, trim($route, '/'))) {
                 return true;
             }
@@ -133,16 +140,45 @@ class Feedback extends Component
     public function openToken(?int $time = null): string
     {
         $t = $time ?? time();
-        return $t . '.' . hash_hmac('sha256', 'open|' . $t, $this->key());
+        $r = bin2hex(random_bytes(6));
+        return $t . '.' . $r . '.' . hash_hmac('sha256', 'open|' . $t . '|' . $r, $this->key());
     }
 
     public function tokenAge(string $token): ?int
     {
-        [$t, $sig] = array_pad(explode('.', $token, 2), 2, '');
-        if (!ctype_digit($t) || !hash_equals(hash_hmac('sha256', 'open|' . $t, $this->key()), $sig)) {
+        [$t, $r, $sig] = array_pad(explode('.', $token, 3), 3, '');
+        if (!ctype_digit($t) || !ctype_xdigit($r) || !hash_equals(hash_hmac('sha256', 'open|' . $t . '|' . $r, $this->key()), $sig)) {
             return null;
         }
         return time() - (int) $t;
+    }
+
+    /** Proof of work asked from this visitor: bits, or 0 when not needed. */
+    public function powBits(): int
+    {
+        return $this->profileId() === null && $this->limitsOn() ? max(0, $this->proofOfWork) : 0;
+    }
+
+    public static function powValid(string $token, string $nonce, int $bits): bool
+    {
+        if ($bits <= 0) {
+            return true;
+        }
+        if ($nonce === '' || strlen($nonce) > 20 || !ctype_digit($nonce)) {
+            return false;
+        }
+        $hash = hash('sha256', $token . ':' . $nonce, true);
+        $zeros = 0;
+        foreach (str_split($hash) as $byte) {
+            $b = ord($byte);
+            if ($b === 0) {
+                $zeros += 8;
+                continue;
+            }
+            $zeros += 7 - (int) floor(log($b, 2));
+            break;
+        }
+        return $zeros >= $bits;
     }
 
     /** What the widget needs to draw itself in $language. */
@@ -168,7 +204,9 @@ class Feedback extends Component
             'strings' => Messages::all($lang),
             'types' => $types,
             'token' => $this->openToken(),
+            'pow' => $this->powBits(),
             'captureMode' => $this->captureMode,
+            'maskEmails' => $this->maskEmails,
             'signedIn' => $this->profileId() !== null,
         ];
     }
@@ -196,6 +234,16 @@ class Feedback extends Component
         }
         if ($this->limitsOn() && $age < $this->minSeconds) {
             return ['ok' => false, 'code' => 'fast'];
+        }
+        $bits = $this->powBits();
+        if ($bits > 0) {
+            $used = 'feedback-pow-' . sha1((string) $in['token']);
+            if (!self::powValid((string) $in['token'], (string) ($in['pow'] ?? ''), $bits) || (Yii::$app->has('cache') && Yii::$app->cache->get($used))) {
+                return ['ok' => false, 'code' => 'pow'];
+            }
+            if (Yii::$app->has('cache')) {
+                Yii::$app->cache->set($used, 1, 7300);   // one token, one submission
+            }
         }
         $message = Sanitizer::text($in['message'] ?? '', 4000);
         if (mb_strlen($message) < 3) {
@@ -239,7 +287,7 @@ class Feedback extends Component
         $consent = !empty($in['snapshot_consent']) && $def['snapshot'];
         if ($consent && is_array($in['snapshot'] ?? null)) {
             $parts = array_values(array_intersect(array_map('strval', (array) ($in['snapshot_parts'] ?? [])), ['messages', 'forms', 'tables']));
-            $snapshot = Sanitizer::snapshot($in['snapshot'], $parts);
+            $snapshot = Sanitizer::snapshot($in['snapshot'], $parts, $this->maskEmails);
             if ($snapshot === ['messages' => [], 'forms' => [], 'tables' => []]) {
                 $snapshot = null;
             }
@@ -467,7 +515,7 @@ class Feedback extends Component
         return (string) ($key ?: 'feedback');
     }
 
-    private function limitsOn(): bool
+    public function limitsOn(): bool
     {
         return $this->limitsEnabled ?? !(defined('YII_ENV_DEV') && YII_ENV_DEV);
     }

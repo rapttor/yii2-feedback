@@ -72,7 +72,7 @@ final class FeedbackTest extends TestCase
 
     public function testHoneypotAndMinimumTimeAndRateLimit(): void
     {
-        $f = $this->fb(['limitsEnabled' => true, 'limits' => ['hour' => 2, 'day' => 5, 'anon_hour' => 2, 'anon_day' => 5]]);
+        $f = $this->fb(['limitsEnabled' => true, 'proofOfWork' => 0, 'limits' => ['hour' => 2, 'day' => 5, 'anon_hour' => 2, 'anon_day' => 5]]);
         $this->assertTrue($f->submit($this->body($f, ['website' => 'http://spam']))['deduped'], 'bots are accepted silently and dropped');
         $this->assertSame(0, (int) (new \yii\db\Query())->from($f->table)->count('*', Yii::$app->db));
         $this->assertSame('fast', $f->submit($this->body($f, ['token' => $f->openToken()]))['code']);
@@ -82,6 +82,30 @@ final class FeedbackTest extends TestCase
         $this->assertSame('limit', $over['code']);
         $this->assertGreaterThan(0, $over['retryAfter']);
         $this->assertTrue($f->submit($this->body($f, ['message' => 'another sender']), '8.8.8.8')['ok'], 'limits are per sender');
+    }
+
+    public function testVisitorsMustSolveProofOfWorkSignedInUsersNeedNot(): void
+    {
+        $f = $this->fb(['limitsEnabled' => true, 'proofOfWork' => 8, 'minSeconds' => 0]);
+        $token = $f->openToken(time() - 10);
+        $this->assertSame('pow', $f->submit(['type' => 'idea', 'message' => 'no work done', 'token' => $token], '5.5.5.5')['code']);
+        $wrong = 0;
+        while (Feedback::powValid($token, (string) $wrong, 8)) {
+            $wrong++;
+        }
+        $this->assertSame('pow', $f->submit(['type' => 'idea', 'message' => 'wrong work', 'token' => $token, 'pow' => (string) $wrong], '5.5.5.5')['code']);
+        $nonce = 0;
+        while (!Feedback::powValid($token, (string) $nonce, 8)) {
+            $nonce++;
+        }
+        $ok = $f->submit(['type' => 'idea', 'message' => 'work done', 'token' => $token, 'pow' => (string) $nonce], '5.5.5.5');
+        $this->assertTrue($ok['ok']);
+        $again = $f->submit(['type' => 'idea', 'message' => 'replayed token', 'token' => $token, 'pow' => (string) $nonce], '5.5.5.5');
+        $this->assertSame('pow', $again['code'], 'a token works once');
+        $this->assertSame(8, $f->powBits(), 'visitors are asked for 8 bits here');
+        $this->signIn();
+        $this->assertSame(0, $f->powBits(), 'signed-in users are not asked');
+        $this->assertTrue($f->submit(['type' => 'idea', 'message' => 'signed in no work', 'token' => $f->openToken(time() - 10)], '5.5.5.5')['ok']);
     }
 
     public function testSameMessageIsMergedNotDuplicated(): void
@@ -112,7 +136,7 @@ final class FeedbackTest extends TestCase
 
         $yes = $f->submit($this->body($f, ['type' => 'error', 'message' => 'with consent', 'snapshot' => $snap, 'snapshot_consent' => 1, 'snapshot_parts' => ['messages', 'forms']]));
         $stored = $f->snapshot($yes['id']);
-        $this->assertSame(['Mail to [email] failed'], $stored['messages']);
+        $this->assertSame(['Mail to jane@example.com failed'], $stored['messages'], 'emails are kept by default: the admin sees them in contact forms anyway');
         $values = array_column($stored['forms'][0]['fields'], 'value', 'name');
         $this->assertSame('Hello', $values['title']);
         $this->assertSame('••••', $values['card_number'], 'sensitive field names are masked');
@@ -121,6 +145,18 @@ final class FeedbackTest extends TestCase
         $this->assertSame([], $stored['tables'], 'a part the user unticked is not stored');
         $this->assertNotNull($f->find($yes['id'])['snapshot_consent_at']);
         $this->assertSame(Feedback::CONSENT_VERSION, $f->find($yes['id'])['snapshot_consent_ver']);
+    }
+
+    public function testEmailMaskingCanBeSwitchedOn(): void
+    {
+        $f = $this->fb(['maskEmails' => true]);
+        $id = $f->submit($this->body($f, ['type' => 'error', 'snapshot_consent' => 1, 'snapshot_parts' => ['messages', 'forms'], 'snapshot' => [
+            'messages' => ['Mail to jane@example.com failed'],
+            'forms' => [['fields' => [['name' => 'contact', 'label' => 'Contact', 'type' => 'email', 'value' => 'jane@example.com']]]],
+        ]]))['id'];
+        $s = $f->snapshot($id);
+        $this->assertSame(['Mail to [email] failed'], $s['messages']);
+        $this->assertSame('[email]', $s['forms'][0]['fields'][0]['value']);
     }
 
     public function testReportNeverStoresSnapshot(): void
@@ -282,8 +318,9 @@ final class FeedbackTest extends TestCase
     public function testRouteExclusion(): void
     {
         $f = $this->fb();
-        $this->assertTrue($f->routeExcluded('legal/privacy'));
-        $this->assertTrue($f->routeExcluded('site/login'));
+        $this->assertFalse($f->routeExcluded('legal/privacy'), 'the widget is site-wide, legal pages included');
+        $this->assertTrue($f->routeExcluded('feedback/submit'));
+        $this->assertFalse($f->routeExcluded('site/login'), 'people who cannot sign in must be able to report it');
         $this->assertFalse($f->routeExcluded('site/index'));
     }
 }

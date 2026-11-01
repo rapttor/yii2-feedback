@@ -31,8 +31,9 @@
   /* ---------- masking (the server masks again) ---------- */
   var SENSITIVE = /pass|pwd|token|secret|card|cvv|cvc|iban|csrf|otp|\bpin\b|ssn|api[-_]?key|auth/i;
   function mask(s) {
-    return String(s)
-      .replace(/[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}/gi, '[email]')
+    s = String(s);
+    if (cfg && cfg.maskEmails) { s = s.replace(/[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}/gi, '[email]'); }
+    return s
       .replace(/\b\d(?:[ \-]?\d){12,18}\b/g, '[number]')
       .replace(/\b[A-Za-z0-9+\/_=\-]{40,}\b/g, '[token]');
   }
@@ -248,10 +249,29 @@
   function draftLoad() { try { return JSON.parse(localStorage.getItem('rapttor_fb_draft') || 'null'); } catch (e) { return null; } }
   function draftClear() { try { localStorage.removeItem('rapttor_fb_draft'); } catch (e) { /* ignore */ } }
 
+  /* Proof of work for visitors: find a nonce so sha256(token:nonce) has `bits` leading zero bits; runs while the person types. */
+  var powJob = null;
+  function solvePow(token, bits) {
+    if (!bits || !window.crypto || !crypto.subtle) { return Promise.resolve(''); }
+    var enc = new TextEncoder();
+    return new Promise(function (resolve) {
+      var n = 0;
+      function zeros(buf) { var b = new Uint8Array(buf), z = 0; for (var i = 0; i < b.length; i++) { if (b[i] === 0) { z += 8; continue; } z += Math.clz32(b[i]) - 24; break; } return z; }
+      function batch() {
+        var tries = [];
+        for (var i = 0; i < 64; i++, n++) { tries.push(crypto.subtle.digest('SHA-256', enc.encode(token + ':' + n)).then((function (nonce) { return function (h) { return zeros(h) >= bits ? nonce : -1; }; })(n))); }
+        Promise.all(tries).then(function (r) {
+          var hit = r.filter(function (x) { return x >= 0; })[0];
+          if (hit !== undefined) { resolve(String(hit)); } else { window.setTimeout(batch, 0); }
+        });
+      }
+      batch();
+    });
+  }
   function loadConfig(lang) {
     return fetch(root.dataset.config + '?lang=' + encodeURIComponent(lang), { credentials: 'same-origin', headers: { Accept: 'application/json' } })
       .then(function (r) { if (!r.ok) { throw new Error('config ' + r.status); } return r.json(); })
-      .then(function (c) { cfg = c; state.openedAt = Date.now(); });
+      .then(function (c) { cfg = c; state.openedAt = Date.now(); powJob = solvePow(c.token, c.pow); });
   }
 
   function open(opts) {
@@ -436,6 +456,9 @@
       snapshot_consent: snap ? 1 : 0, snapshot_parts: snap ? parts : [], snapshot: snap
     };
     state.sending = true; state.error = ''; render();
+    (powJob || Promise.resolve('')).then(function (nonce) { body.pow = nonce; send(body); });
+  }
+  function send(body) {
     var headers = { 'Content-Type': 'application/json', Accept: 'application/json' };
     headers['X-CSRF-Token'] = root.dataset.csrf;
     fetch(root.dataset.submit, { method: 'POST', credentials: 'same-origin', headers: headers, body: JSON.stringify(body) })
@@ -445,7 +468,7 @@
         if (res.status === 200 && res.json.ok) { draftClear(); var keepLang = cfg; state = freshState(); state.view = 'thanks'; cfg = keepLang; return render(); }
         var c = res.json && res.json.code;
         state.error = res.status === 429 ? t('error.limit') : c === 'message' ? t('error.message') : c === 'email' ? t('error.email') : c === 'type' ? t('error.type') : t('error.generic');
-        if (c === 'token' || c === 'fast') { return loadConfig(cfg.lang).then(function () { state.error = t('error.generic'); render(); }); }
+        if (c === 'token' || c === 'fast' || c === 'pow') { return loadConfig(cfg.lang).then(function () { state.error = t('error.generic'); render(); }); }
         render();
       })
       .catch(function () { state.sending = false; state.error = t('error.network'); render(); });

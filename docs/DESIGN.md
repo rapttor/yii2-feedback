@@ -111,7 +111,7 @@ Captured, in order of usefulness:
 Stored as JSON (`{messages, forms, tables}`) in **`rapttor_feedback_snapshot`** (`feedback_id`, `data`, `created_at`), never in the feedback row, so list/detail queries cannot load it by accident.
 
 Masking and control:
-- Never captured: password and hidden fields. Values masked (`••••`) when the field name matches `pass|token|secret|card|cvv|iban|csrf` and similar, and any value that looks like an email, card number or long token.
+- Never captured: password and hidden fields. Values masked (`••••`) when the field name matches `pass|token|secret|card|cvv|iban|csrf` and similar; card-like digit runs and long token-like strings are masked in any value. **Email addresses are kept by default** (`maskEmails => false`): the admin sees them in contact forms anyway and they help debugging; switch on for public use.
 - Apps mark regions: `data-feedback-hide` removes, `data-feedback-keep` forces a field in.
 - Config `captureMode`: `all` (everything not masked; beta) or `marked` (only `data-feedback-capture` elements; safer for customers later).
 - **Explicit consent required**: the server rejects a snapshot without `snapshot_consent=1` and drops it; consent time and wording version are stored on the row (proof, same idea as `yii2-legal` consents).
@@ -123,7 +123,7 @@ Masking and control:
 
 ## 8. Rate limiting and spam (light)
 
-Counters computed from `rapttor_feedback` itself; per profile and per `ip_hash`: default 10 per hour, 30 per day, anonymous stricter; off in `YII_ENV_DEV`; `429` + `Retry-After` + friendly copy. Honeypot, minimum 3 s between opening and sending (signed token), max length, same-fingerprint merge within a day, CSRF. Real client IP needs `request.trustedHosts` on the proxy.
+Counters computed from `rapttor_feedback` itself; per profile and per `ip_hash`: default 10 per hour, 30 per day, anonymous stricter; off in `YII_ENV_DEV`; `429` + `Retry-After` + friendly copy. Visitors (not signed in) also solve a **proof of work** (`proofOfWork` bits, default 18; the browser finds a nonce while they type; each token works once, tracked in the cache). Honeypot, minimum 3 s between opening and sending (signed token), max length, same-fingerprint merge within a day, CSRF. Real client IP needs `request.trustedHosts` on the proxy.
 
 ## 9. Inbox module
 

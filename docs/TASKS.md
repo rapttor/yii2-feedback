@@ -5,7 +5,8 @@ Design: [DESIGN.md](DESIGN.md). Model tag = the cheapest model that can do it we
 ## Progress (2026-11-01)
 
 Built and unit-tested (16 PHPUnit tests): schema + migration, `Feedback` component (submit, validation, rate limits, honeypot/min-time, dedupe, consent-gated snapshot, status with `rev`, reply email, export/anonymise/delete/purge), `Sanitizer`, `Languages` (22) and message files, public JSON controller, console `feedback/purge`, widget (button, drag, close cookie, dialog, picker, snapshot preview, errors/failed-request buffer), admin inbox module (list, filters, detail, status, notes, reply), README, AGENTS.md, llms.txt. Integrated in `demo` (config, compose mount, layout, backend menu, migration applied in Docker).
-**Not yet verified in a browser:** the widget as a signed-in user (needs a signed-in demo user). Not done: hotkey (optional), a11y pass, functional tests of the inbox, legal texts category in `yii2-legal`, account-deletion hooks in the demo, Packagist.
+**Public-launch work (2026-11-01):** done: visitors can send (`guests`), proof of work for visitors, email masking optional, widget kept on sign-in pages, CSP checked by analysis (same-origin only, no eval, report-only console clean). Left: new `feedback` clause for the `rapttor/legal` templates in 22 languages (needs lawyer review); `anonymiseProfile`/`export` calls once the demo gets account deletion (see demo TASKS); handoff of `report` to `yii2-legal` requests; screen-reader and contrast pass; human review of the 20 machine translations; enforced-CSP run with `CSP_ENFORCE=1`; commit, tag, Packagist.
+**Earlier note, not yet verified:** the widget as a signed-in user (needs a signed-in demo user). Not done: hotkey (optional), a11y pass, functional tests of the inbox, legal texts category in `yii2-legal`, account-deletion hooks in the demo, Packagist.
 
 ## 0. Decisions
 

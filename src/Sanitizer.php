@@ -20,9 +20,11 @@ final class Sanitizer
     }
 
     /** Masks emails, card-like digit runs and long token-like strings. */
-    public static function mask(string $s): string
+    public static function mask(string $s, bool $emails = true): string
     {
-        $s = preg_replace('/[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}/i', '[email]', $s) ?? $s;
+        if ($emails) {
+            $s = preg_replace('/[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}/i', '[email]', $s) ?? $s;
+        }
         $s = preg_replace('/\b\d(?:[ \-]?\d){12,18}\b/', '[number]', $s) ?? $s;
         return preg_replace('/\b[A-Za-z0-9+\/_=\-]{40,}\b/', '[token]', $s) ?? $s;
     }
@@ -83,12 +85,12 @@ final class Sanitizer
      * @param string[] $parts any of messages, forms, tables
      * @return array{messages: string[], forms: array, tables: array}
      */
-    public static function snapshot(array $in, array $parts): array
+    public static function snapshot(array $in, array $parts, bool $maskEmails = true): array
     {
         $out = ['messages' => [], 'forms' => [], 'tables' => []];
         if (in_array('messages', $parts, true)) {
             foreach (array_slice(is_array($in['messages'] ?? null) ? $in['messages'] : [], 0, 20) as $m) {
-                $t = self::mask(self::text($m, 300));
+                $t = self::mask(self::text($m, 300), $maskEmails);
                 if ($t !== '') {
                     $out['messages'][] = $t;
                 }
@@ -110,8 +112,8 @@ final class Sanitizer
                         continue;
                     }
                     $label = self::text($f['label'] ?? '', 120);
-                    $value = self::sensitiveName($name) || self::sensitiveName($label) ? '••••' : self::mask(self::text($f['value'] ?? '', 500));
-                    $fields[] = ['name' => $name, 'label' => $label, 'type' => $type, 'value' => $value, 'error' => self::mask(self::text($f['error'] ?? '', 200))];
+                    $value = self::sensitiveName($name) || self::sensitiveName($label) ? '••••' : self::mask(self::text($f['value'] ?? '', 500), $maskEmails);
+                    $fields[] = ['name' => $name, 'label' => $label, 'type' => $type, 'value' => $value, 'error' => self::mask(self::text($f['error'] ?? '', 200), $maskEmails)];
                 }
                 $out['forms'][] = ['id' => self::text($form['id'] ?? '', 80), 'action' => self::path($form['action'] ?? '', 200), 'fields' => $fields];
             }
@@ -121,10 +123,10 @@ final class Sanitizer
                 if (!is_array($t)) {
                     continue;
                 }
-                $headers = array_map(static fn ($h) => self::mask(self::text($h, 120)), array_slice(is_array($t['headers'] ?? null) ? $t['headers'] : [], 0, 15));
+                $headers = array_map(static fn ($h) => self::mask(self::text($h, 120), $maskEmails), array_slice(is_array($t['headers'] ?? null) ? $t['headers'] : [], 0, 15));
                 $rows = [];
                 foreach (array_slice(is_array($t['rows'] ?? null) ? $t['rows'] : [], 0, 20) as $r) {
-                    $rows[] = array_map(static fn ($c) => self::mask(self::text($c, 200)), array_slice(is_array($r) ? $r : [], 0, 15));
+                    $rows[] = array_map(static fn ($c) => self::mask(self::text($c, 200), $maskEmails), array_slice(is_array($r) ? $r : [], 0, 15));
                 }
                 $out['tables'][] = ['caption' => self::text($t['caption'] ?? '', 120), 'headers' => $headers, 'rows' => $rows];
             }
