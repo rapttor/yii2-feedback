@@ -68,7 +68,7 @@ class Feedback extends Component
     public bool $guests = true;
     /** Routes (patterns with *) where only the floating button is hidden; menu links and Feedback.open() still work there. */
     public array $hiddenRoutes = [];
-    /** Routes (patterns with *) where the widget is not offered at all (no button, no dialog, no links).
+    /** Routes (patterns with *) where the widget is not offered at all (no button, no dialog, no links). */
     public array $excludeRoutes = ['feedback/*'];
     /** Preference cookie holding the "button closed" flag and its position. */
     public string $cookie = 'rapttor_fb';
