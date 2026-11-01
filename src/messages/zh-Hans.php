@@ -4,6 +4,11 @@
 return [
     'fab.label' => '反馈',
     'fab.close' => '隐藏反馈按钮',
+    'fab.confirm' => '隐藏反馈按钮？',
+    'fab.confirm.hint' => '您可以随时通过菜单中的反馈选项重新显示。',
+    'fab.confirm.yes' => '隐藏',
+    'fab.confirm.no' => '保留',
+    'fab.toggle' => '在页面上显示反馈按钮',
     'dialog.title' => '向我们提交反馈',
     'dialog.close' => '关闭',
     'dialog.back' => '返回',

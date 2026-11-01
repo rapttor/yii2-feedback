@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vue 3</title>
+<link rel="stylesheet" href="../src/widget/assets/feedback.css">
+<link rel="stylesheet" href="assets/demo.css">
+</head><body>
+<nav><a href="index.html">&larr; all examples</a></nav>
+<h1>Vue 3</h1>
+<p class="lead">The component starts the widget when it mounts and removes it when it unmounts. For a build setup use <code>vue/FeedbackWidget.vue</code>.</p>
+<div id="app">
+    <feedback-widget :options="options" @sent="onSent"></feedback-widget>
+    <p><button class="demo" @click="open('error')">Report a problem</button> <button class="demo alt" @click="open()">Feedback</button>
+       <button class="demo alt" @click="lang = lang === 'en' ? 'sv' : 'en'">Language: {{ lang }}</button> <span v-if="sent">Sent: {{ sent }}</span></p>
+  </div>
+  <h2>Something on the page</h2>
+  <p class="alert" role="alert">Order form: please check the highlighted fields.</p>
+  <form id="order-form" onsubmit="return false">
+    <label>Name <input type="text" name="name" value="Ada Lovelace"></label>
+    <label>Card number (always masked) <input type="text" name="card_number" value="4111 1111 1111 1111"></label>
+    <label>Password (never read) <input type="password" name="pw" value="secret"></label>
+  </form>
+  <h3>Orders</h3>
+  <table><thead><tr><th>#</th><th>Item</th><th>Total</th></tr></thead><tbody>
+    <tr><td>1001</td><td>Notebook</td><td>12.00</td></tr><tr><td>1002</td><td>Pen set</td><td>7.50</td></tr></tbody></table>
+<div class="log"><strong>What the page received</strong> (your <code>onSubmit</code> gets this object):<pre id="log">nothing yet: open the Feedback button, write a message and send</pre></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.38/vue.global.prod.min.js"></script>
+<script src="../src/widget/assets/feedback.js"></script>
+<script>
+  function show(p) { document.getElementById('log').textContent = JSON.stringify(p, null, 2); }
+  const { createApp, ref, computed, watch, onMounted, onBeforeUnmount } = Vue;
+
+  // same as vue/FeedbackWidget.vue
+  const FeedbackWidget = {
+    props: { options: { type: Object, default: () => ({}) } },
+    emits: ['sent', 'open', 'close', 'error'],
+    setup(props, { emit, expose }) {
+      let off = [];
+      const start = () => {
+        off.forEach(f => f()); off = [];
+        window.Feedback.init(props.options);
+        ['sent', 'open', 'close', 'error'].forEach(n => off.push(window.Feedback.on(n, d => emit(n, d))));
+      };
+      onMounted(start);
+      watch(() => props.options, start, { deep: true });
+      onBeforeUnmount(() => { off.forEach(f => f()); window.Feedback.destroy(); });
+      expose({ open: (type) => window.Feedback.open(type ? { type } : {}) });
+      return () => null;
+    }
+  };
+
+  createApp({
+    components: { FeedbackWidget },
+    setup() {
+      const lang = ref('en'), sent = ref('');
+      const options = computed(() => ({
+        lang: lang.value, i18nUrl: '../src/widget/assets/i18n',
+        onSubmit: (payload) => { show(payload); return Promise.resolve(); }
+      }));
+      return { lang, sent, options, open: (type) => window.Feedback.open(type ? { type } : {}), onSent: (d) => { sent.value = d.type; } };
+    }
+  }).mount('#app');
+</script>
+</body></html>

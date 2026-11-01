@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>React</title>
+<link rel="stylesheet" href="../src/widget/assets/feedback.css">
+<link rel="stylesheet" href="assets/demo.css">
+</head><body>
+<nav><a href="index.html">&larr; all examples</a></nav>
+<h1>React</h1>
+<p class="lead">A component that starts the widget in an effect and cleans up on unmount (also fine in StrictMode). For a build setup use <code>react/FeedbackWidget.jsx</code>.</p>
+<div id="root"></div>
+  <h2>Something on the page</h2>
+  <p class="alert" role="alert">Order form: please check the highlighted fields.</p>
+  <form id="order-form" onsubmit="return false">
+    <label>Name <input type="text" name="name" value="Ada Lovelace"></label>
+    <label>Card number (always masked) <input type="text" name="card_number" value="4111 1111 1111 1111"></label>
+    <label>Password (never read) <input type="password" name="pw" value="secret"></label>
+  </form>
+  <h3>Orders</h3>
+  <table><thead><tr><th>#</th><th>Item</th><th>Total</th></tr></thead><tbody>
+    <tr><td>1001</td><td>Notebook</td><td>12.00</td></tr><tr><td>1002</td><td>Pen set</td><td>7.50</td></tr></tbody></table>
+<div class="log"><strong>What the page received</strong> (your <code>onSubmit</code> gets this object):<pre id="log">nothing yet: open the Feedback button, write a message and send</pre></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="../src/widget/assets/feedback.js"></script>
+<script>
+  function show(p) { document.getElementById('log').textContent = JSON.stringify(p, null, 2); }
+  const h = React.createElement, { useEffect, useState } = React;
+
+  // same as react/FeedbackWidget.jsx (written without JSX so this page needs no build step)
+  function FeedbackWidget({ options, onSent }) {
+    useEffect(() => {
+      window.Feedback.init(options);
+      const off = onSent ? window.Feedback.on('sent', onSent) : () => {};
+      return () => { off(); window.Feedback.destroy(); };
+    }, [JSON.stringify(options, (k, v) => typeof v === 'function' ? 'fn' : v)]);
+    return null;
+  }
+
+  function App() {
+    const [lang, setLang] = useState('en'), [sent, setSent] = useState('');
+    const options = { lang, i18nUrl: '../src/widget/assets/i18n', onSubmit: (payload) => { show(payload); return Promise.resolve(); } };
+    return h(React.Fragment, null,
+      h(FeedbackWidget, { options, onSent: (d) => setSent(d.type) }),
+      h('p', null,
+        h('button', { className: 'demo', onClick: () => Feedback.open({ type: 'error' }) }, 'Report a problem'),
+        h('button', { className: 'demo alt', onClick: () => Feedback.open() }, 'Feedback'),
+        h('button', { className: 'demo alt', onClick: () => setLang(lang === 'en' ? 'it' : 'en') }, 'Language: ' + lang),
+        sent && h('span', null, ' Sent: ' + sent)));
+  }
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.StrictMode, null, h(App)));
+</script>
+</body></html>

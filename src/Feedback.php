@@ -70,6 +70,10 @@ class Feedback extends Component
     public array $hiddenRoutes = [];
     /** Routes (patterns with *) where the widget is not offered at all (no button, no dialog, no links). */
     public array $excludeRoutes = ['feedback/*'];
+    /** Ask before the floating button is closed with its "x" (the switch inside the dialog never asks). */
+    public bool $confirmHide = true;
+    /** Read background, text and brand colour from the page so the widget looks like the site; false = only Bootstrap variables and defaults. */
+    public bool $siteColors = true;
     /** Preference cookie holding the "button closed" flag and its position. */
     public string $cookie = 'rapttor_fb';
     /** Free text added to every row's technical details (a version or release tag). */

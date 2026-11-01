@@ -49,6 +49,29 @@ Status as of 2026-11-01: **beta-ready, not public-launch-ready.** 21 PHPUnit tes
 | todo | Stats page (volume, ratings, top routes, top JS errors) | Sonnet |
 | todo | Functional (request-level) tests of the module; security review of access and encoding | Sonnet, Opus |
 
+## 3b. Without Yii (HTML/JS components)
+
+| Status | Task | Model |
+|---|---|---|
+| done | Core refactor: `init/destroy/close/on`, options object, `onSubmit`, `submitUrl`, `i18nUrl`, events, SSR-safe import, built-in English | Opus |
+| done | `tools/export-i18n.php` + 22 `i18n/<lang>.json` + sync test | Sonnet |
+| done | Web component, jQuery plugin | Sonnet |
+| done | Examples run in a browser: plain, data attributes, web component, jQuery, Vue 3, React (StrictMode) | Sonnet |
+| todo | Compile-check the Vue SFC and React JSX with a real bundler; Svelte/Angular snippets are untested | Sonnet |
+| todo | npm package (`@rapttor/feedback`: JS, CSS, i18n, web component) so apps can `import` it instead of a relative path | Sonnet |
+| todo | CORS + signed script tag so a non-Yii site can post to a Yii inbox safely (the "embeddable script" item below) | Opus |
+
+## 3c. Show/hide and colours
+
+| Status | Task | Model |
+|---|---|---|
+| done | Confirmation popover when the button is closed (`confirmHide`, placed by measuring so it stays on screen) | Sonnet |
+| done | Switch "Show the feedback button on pages" in the dialog footer; 5 new texts in 22 languages | Sonnet, Haiku |
+| done | `Widget::link()` main-menu entry; instruction in AGENTS.md, llms.txt, rapttor.md to keep it | Sonnet |
+| done | Site colours read from the page + `--rf-*` overrides, `siteColors` | Sonnet |
+| done | Demo: menu entry, full-screen card menu (`<dialog>`), home page feedback card | Sonnet |
+| todo | Check the colour detection on more themes (light themes, themes with grey links) and in the 82 `yii2-themes` themes | Sonnet |
+
 ## 4. Integration and launch
 
 | Status | Task | Model |

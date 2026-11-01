@@ -4,6 +4,11 @@
 return [
     'fab.label' => 'Feedback',
     'fab.close' => 'Hide the feedback button',
+    'fab.confirm' => 'Hide the feedback button?',
+    'fab.confirm.hint' => 'You can bring it back any time from the Feedback option in the menu.',
+    'fab.confirm.yes' => 'Hide',
+    'fab.confirm.no' => 'Keep',
+    'fab.toggle' => 'Show the feedback button on pages',
     'dialog.title' => 'Send us your feedback',
     'dialog.close' => 'Close',
     'dialog.back' => 'Back',

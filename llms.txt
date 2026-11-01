@@ -2,13 +2,15 @@
 
 > Yii2 extension: feedback widget (closable floating button, menu trigger, consented screen snapshot, proof of work for visitors, 22 languages) plus a small admin inbox. One shared table `rapttor_feedback` (+ notes, snapshots). Reply emails go through the app's mailer (Postar via `MAIL_DSN`).
 
-Integrating or changing this package: read AGENTS.md first.
+Integrating or changing this package: read AGENTS.md first. Always keep a main-menu entry that opens the feedback form (`Widget::link()` / `data-feedback-open`): it is how users bring the floating button back.
 
 - [AGENTS.md](AGENTS.md): integration steps and rules
 - [README.md](README.md): install, config, triggers, account hooks
 - [docs/DESIGN.md](docs/DESIGN.md): design decisions; [docs/TASKS.md](docs/TASKS.md): task list
 - [src/Feedback.php](src/Feedback.php): the component (submit, status, reply, export, anonymise, purge)
 - [src/Sanitizer.php](src/Sanitizer.php): masking and caps for everything the browser sends
-- [src/widget/](src/widget/): Widget.php and assets (feedback.js, feedback.css)
+- [src/widget/](src/widget/): Widget.php and assets (feedback.js, feedback.css, rapttor-feedback-element.js web component, jquery.rapttor-feedback.js, i18n/<lang>.json)
+- [examples/](examples/): runnable pages for plain HTML, data attributes, web component, jQuery, Vue, React; other-frameworks.md
+- [tools/export-i18n.php](tools/export-i18n.php): generates the language JSON and the inlined English defaults
 - [src/backend/](src/backend/): the inbox module (own layout)
 - [tests/FeedbackTest.php](tests/FeedbackTest.php): behaviour covered

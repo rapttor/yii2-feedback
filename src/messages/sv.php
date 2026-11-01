@@ -4,6 +4,11 @@
 return [
     'fab.label' => 'Feedback',
     'fab.close' => 'Dölj feedbackknappen',
+    'fab.confirm' => 'Dölja feedbackknappen?',
+    'fab.confirm.hint' => 'Du kan visa den igen när som helst via alternativet Feedback i menyn.',
+    'fab.confirm.yes' => 'Dölj',
+    'fab.confirm.no' => 'Behåll',
+    'fab.toggle' => 'Visa feedbackknappen på sidor',
     'dialog.title' => 'Skicka din feedback till oss',
     'dialog.close' => 'Stäng',
     'dialog.back' => 'Tillbaka',

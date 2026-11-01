@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Feedback widget: examples</title><link rel="stylesheet" href="assets/demo.css"></head><body>
+<h1>Feedback widget: examples</h1>
+<p class="lead">The same widget, started five ways. Every page has a form, a table and an alert, so you can see the consented screen data.</p>
+<ul>
+  <li><a href="plain.html">Plain HTML</a>: one CSS file, one JS file, <code>Feedback.init()</code>, no server</li>
+  <li><a href="data-attributes.html">Data attributes</a>: no JavaScript of your own, posts to your endpoint (needs <code>node examples/serve.mjs</code>)</li>
+  <li><a href="web-component.html">Web component</a>: <code>&lt;rapttor-feedback&gt;</code></li>
+  <li><a href="jquery.html">jQuery</a>: <code>$.feedback()</code>, <code>$(el).feedback()</code></li>
+  <li><a href="vue.html">Vue 3</a> (and <code>vue/FeedbackWidget.vue</code>, <code>vue/useFeedback.js</code>)</li>
+  <li><a href="react.html">React</a> (and <code>react/FeedbackWidget.jsx</code>)</li>
+  <li><a href="other-frameworks.md">Svelte, Angular, Next.js, Nuxt, Alpine</a> (snippets, not run)</li>
+</ul>
+<p>Run them: <code>node examples/serve.mjs</code> and open <a href="http://localhost:8099/examples/">http://localhost:8099/examples/</a> (opening the files directly also works for all but the data-attributes page). The Vue and React pages load their framework from cdnjs.</p>
+</body></html>

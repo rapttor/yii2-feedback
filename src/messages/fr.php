@@ -4,6 +4,11 @@
 return [
     'fab.label' => 'Commentaires',
     'fab.close' => 'Masquer le bouton de commentaires',
+    'fab.confirm' => 'Masquer le bouton de commentaires ?',
+    'fab.confirm.hint' => 'Vous pouvez le réafficher à tout moment via l’option Commentaires du menu.',
+    'fab.confirm.yes' => 'Masquer',
+    'fab.confirm.no' => 'Garder',
+    'fab.toggle' => 'Afficher le bouton de commentaires sur les pages',
     'dialog.title' => 'Envoyez-nous vos commentaires',
     'dialog.close' => 'Fermer',
     'dialog.back' => 'Retour',

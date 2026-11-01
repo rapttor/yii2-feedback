@@ -4,6 +4,11 @@
 return [
     'fab.label' => 'Geri bildirim',
     'fab.close' => 'Geri bildirim düğmesini gizle',
+    'fab.confirm' => 'Geri bildirim düğmesi gizlensin mi?',
+    'fab.confirm.hint' => 'Menüdeki Geri bildirim seçeneğinden istediğiniz zaman tekrar gösterebilirsiniz.',
+    'fab.confirm.yes' => 'Gizle',
+    'fab.confirm.no' => 'Kalsın',
+    'fab.toggle' => 'Sayfalarda geri bildirim düğmesini göster',
     'dialog.title' => 'Geri bildiriminizi bize gönderin',
     'dialog.close' => 'Kapat',
     'dialog.back' => 'Geri',

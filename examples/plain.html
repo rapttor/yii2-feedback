@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plain HTML</title>
+<link rel="stylesheet" href="../src/widget/assets/feedback.css">
+<link rel="stylesheet" href="assets/demo.css">
+</head><body>
+<nav><a href="index.html">&larr; all examples</a></nav>
+<h1>Plain HTML</h1>
+<p class="lead">One CSS file, one JS file, one <code>Feedback.init()</code>. No framework, no server: <code>onSubmit</code> receives the payload.</p>
+<p><a href="#" data-feedback-open>Give feedback</a> &middot; <a href="#" data-feedback-open="idea">Suggest an idea</a> (any element with <code>data-feedback-open</code>)</p>
+  <h2>Something on the page</h2>
+  <p class="alert" role="alert">Order form: please check the highlighted fields.</p>
+  <form id="order-form" onsubmit="return false">
+    <label>Name <input type="text" name="name" value="Ada Lovelace"></label>
+    <label>Card number (always masked) <input type="text" name="card_number" value="4111 1111 1111 1111"></label>
+    <label>Password (never read) <input type="password" name="pw" value="secret"></label>
+  </form>
+  <h3>Orders</h3>
+  <table><thead><tr><th>#</th><th>Item</th><th>Total</th></tr></thead><tbody>
+    <tr><td>1001</td><td>Notebook</td><td>12.00</td></tr><tr><td>1002</td><td>Pen set</td><td>7.50</td></tr></tbody></table>
+<div class="log"><strong>What the page received</strong> (your <code>onSubmit</code> gets this object):<pre id="log">nothing yet: open the Feedback button, write a message and send</pre></div>
+<script src="../src/widget/assets/feedback.js"></script>
+<script>
+  function show(p) { document.getElementById('log').textContent = JSON.stringify(p, null, 2); }
+  Feedback.init({
+    lang: 'en',
+    selector: true,                                   // language dropdown in the dialog
+    i18nUrl: '../src/widget/assets/i18n',             // the 22 language files; without it the dialog is English
+    onSubmit: function (payload) { show(payload); return Promise.resolve(); }   // or: submitUrl: '/api/feedback'
+  });
+</script>
+</body></html>

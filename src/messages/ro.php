@@ -4,6 +4,11 @@
 return [
     'fab.label' => 'Feedback',
     'fab.close' => 'Ascunde butonul de feedback',
+    'fab.confirm' => 'Ascunzi butonul de feedback?',
+    'fab.confirm.hint' => 'Îl poți reafișa oricând din opțiunea Feedback din meniu.',
+    'fab.confirm.yes' => 'Ascunde',
+    'fab.confirm.no' => 'Păstrează',
+    'fab.toggle' => 'Afișează butonul de feedback pe pagini',
     'dialog.title' => 'Trimiteți-ne feedbackul',
     'dialog.close' => 'Închide',
     'dialog.back' => 'Înapoi',

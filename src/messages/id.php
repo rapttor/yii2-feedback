@@ -4,6 +4,11 @@
 return [
     'fab.label' => 'Masukan',
     'fab.close' => 'Sembunyikan tombol masukan',
+    'fab.confirm' => 'Sembunyikan tombol masukan?',
+    'fab.confirm.hint' => 'Anda dapat menampilkannya kembali kapan saja melalui opsi Masukan di menu.',
+    'fab.confirm.yes' => 'Sembunyikan',
+    'fab.confirm.no' => 'Biarkan',
+    'fab.toggle' => 'Tampilkan tombol masukan di halaman',
     'dialog.title' => 'Kirim masukan Anda kepada kami',
     'dialog.close' => 'Tutup',
     'dialog.back' => 'Kembali',

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>jQuery</title>
+<link rel="stylesheet" href="../src/widget/assets/feedback.css">
+<link rel="stylesheet" href="assets/demo.css">
+</head><body>
+<nav><a href="index.html">&larr; all examples</a></nav>
+<h1>jQuery</h1>
+<p class="lead">The plugin adds <code>$.feedback()</code> and <code>$(el).feedback()</code>. Events are normal jQuery events on <code>document</code>.</p>
+<p><button class="demo" id="bug">Report a bug</button> <button class="demo alt" id="idea">I have an idea</button> <button class="demo alt" id="any">Feedback</button></p>
+  <h2>Something on the page</h2>
+  <p class="alert" role="alert">Order form: please check the highlighted fields.</p>
+  <form id="order-form" onsubmit="return false">
+    <label>Name <input type="text" name="name" value="Ada Lovelace"></label>
+    <label>Card number (always masked) <input type="text" name="card_number" value="4111 1111 1111 1111"></label>
+    <label>Password (never read) <input type="password" name="pw" value="secret"></label>
+  </form>
+  <h3>Orders</h3>
+  <table><thead><tr><th>#</th><th>Item</th><th>Total</th></tr></thead><tbody>
+    <tr><td>1001</td><td>Notebook</td><td>12.00</td></tr><tr><td>1002</td><td>Pen set</td><td>7.50</td></tr></tbody></table>
+<div class="log"><strong>What the page received</strong> (your <code>onSubmit</code> gets this object):<pre id="log">nothing yet: open the Feedback button, write a message and send</pre></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="../src/widget/assets/feedback.js"></script>
+<script src="../src/widget/assets/jquery.rapttor-feedback.js"></script>
+<script>
+  function show(p) { document.getElementById('log').textContent = JSON.stringify(p, null, 2); }
+  $.feedback({
+    lang: 'fr', selector: true, i18nUrl: '../src/widget/assets/i18n',
+    onSubmit: function (payload) { show(payload); return Promise.resolve(); }
+  });
+  $('#bug').feedback({ type: 'error' });
+  $('#idea').feedback({ type: 'idea' });
+  $('#any').feedback();
+  $(document).on('rapttor-feedback:sent', function (e) { console.log('sent', e.originalEvent.detail); });
+</script>
+</body></html>

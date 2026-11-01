@@ -87,6 +87,8 @@ Vanilla JS + CSS, no jQuery, no CDN (CSP-safe), CSS variables so `yii2-themes` c
   - Page rules: `excludeRoutes` removes the widget completely on matching routes; `hiddenRoutes` hides only the floating button there (links and `Feedback.open()` still work). The widget is site-wide by default (legal and sign-in pages included).
   - Closing sets cookie **`rapttor_fb`** (`SameSite=Lax`, path `/`, one year; holds hidden flag and button position). The server reads it and does not render the button, so there is no flash. It is a preference cookie: list it in `yii2-legal`'s cookie list.
   - **`Feedback.open({type})`** and `data-feedback-open` (menu item) always work, cookie or not.
+  - Closing with the "x" asks first (`confirmHide`). The dialog footer has the switch "Show the feedback button on pages", and every app keeps a main-menu entry (`Widget::link()`) that opens the dialog, so the button can always be brought back.
+  - Colours: read from the page on open (`siteColors`), overridable with `--rf-*` variables.
   - **`Feedback.show()`** / PHP `Feedback::showButton()` clears the cookie and brings the button back: the hook for an app's "show feedback button" menu option.
   - Hotkey: option, **off by default** (the app may use keys itself).
 - **Dialog**: four choice tiles; option chips; **auto-growing textarea**; element picker ("point at the problem"); stars where the type has them; email if anonymous; checkboxes with short titles and small print below:

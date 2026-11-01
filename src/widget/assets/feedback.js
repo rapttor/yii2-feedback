@@ -1,11 +1,39 @@
-/* rapttor/yii2-feedback widget. Vanilla JS, no dependencies. API: Feedback.open({type}), Feedback.show(), Feedback.hide(). */
+/*!
+ * rapttor feedback widget. Vanilla JS, no dependencies, works in any page or framework.
+ *
+ *   Feedback.init({ ... })      start (or restart) with options, see README "Without Yii"
+ *   Feedback.open({type})       open the dialog; Feedback.close()
+ *   Feedback.show() / hide()    the floating button (hide remembers the choice in a cookie)
+ *   Feedback.on(name, fn)       open | close | sent | error; also DOM events "rapttor-feedback:<name>" on document
+ *   Feedback.destroy()          remove everything (single page apps: call it when your component unmounts)
+ *
+ * With the Yii extension the page carries <div id="rapttor-feedback" data-...> and this file starts itself.
+ */
 (function () {
   'use strict';
 
-  var VERSION = '0.1.0';
-  var root = null, cfg = null, fab = null, overlay = null, lastFocus = null;
+  var VERSION = '0.2.0';
+
+  /* Server side rendering / Node: nothing to do, but importing the file must not fail. */
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    var noop = function () {};
+    if (typeof module === 'object' && module.exports) {
+      module.exports = { version: VERSION, init: noop, open: noop, close: noop, show: noop, hide: noop, destroy: noop, on: noop, off: noop };
+    }
+    return;
+  }
+  if (window.Feedback && window.Feedback.version === VERSION && window.Feedback.init) { return; }   // loaded twice
+
+  /* @generated:start (php tools/export-i18n.php) */
+  var EN = {"fab.label":"Feedback","fab.close":"Hide the feedback button","fab.confirm":"Hide the feedback button?","fab.confirm.hint":"You can bring it back any time from the Feedback option in the menu.","fab.confirm.yes":"Hide","fab.confirm.no":"Keep","fab.toggle":"Show the feedback button on pages","dialog.title":"Send us your feedback","dialog.close":"Close","dialog.back":"Back","dialog.language":"Language","type.error":"Something is not working","type.error.hint":"A function fails or a page looks wrong","type.idea":"I have an idea","type.idea.hint":"Suggest a feature or an improvement","type.report":"Report content","type.report.hint":"Copyright, my work or picture is used, abuse","type.other":"Something else","type.other.hint":"Anything you want to tell us","sub.error.not_working":"A function does not work","sub.error.page_load":"A page does not load","sub.error.wrong_result":"The result is wrong","sub.error.slow":"It is slow","sub.error.display":"It looks wrong","sub.error.other":"Other","sub.report.infringement":"Infringement","sub.report.dmca":"DMCA / my work is used","sub.report.picture":"My picture is used in a template","sub.report.offensive":"Offensive content","sub.report.other":"Other","sub.idea.new_feature":"A new feature","sub.idea.improve":"Improve something that exists","sub.idea.other":"Other","field.message":"What happened, or what do you have in mind?","field.message.placeholder":"Write as much or as little as you like","field.rating":"How do you like it so far?","field.rating.star":"{n} of 5","field.email":"Your email (optional)","field.email.required":"Your email","field.email.hint":"So we can answer you. Used only for this feedback.","pick.button":"Point at the problem","pick.hint":"Click the part of the page you mean. Esc cancels.","pick.done":"Selected: {what}","pick.clear":"Remove selection","consent.screen.title":"Include what is on my screen","consent.screen.small":"Sends the messages shown on this page, what you typed in forms and the tables you see. Passwords and card data are never included. Used only to understand the problem.","consent.screen.preview":"Show what will be sent","consent.part.messages":"Messages ({n})","consent.part.forms":"Form values ({n})","consent.part.tables":"Tables ({n})","consent.screen.empty":"Nothing to send from this page.","tech.title":"Include technical details","tech.small":"Browser, screen size and recent errors. No page content.","send":"Send","sending":"Sending...","thanks.title":"Thank you!","thanks.text":"Your feedback has arrived. It helps us make this better.","thanks.again":"Send more","error.generic":"Could not send. Please try again.","error.limit":"You have sent a lot of feedback just now. Please try again later.","error.message":"Please write a few words.","error.email":"Please enter a valid email address.","error.type":"Please choose what this is about.","error.network":"No connection. Your text is kept.","draft.restored":"We kept your unfinished text.","reply.subject":"About your feedback","reply.intro":"Hello, thank you for your feedback:","reply.sign":"Kind regards"};
+  var DEFAULT_TYPES = [{"type":"error","subtypes":["not_working","page_load","wrong_result","slow","display","other"],"rating":false,"picker":true,"snapshot":true,"emailRequired":false},{"type":"idea","subtypes":["new_feature","improve","other"],"rating":true,"picker":false,"snapshot":true,"emailRequired":false},{"type":"report","subtypes":["infringement","dmca","picture","offensive","other"],"rating":false,"picker":false,"snapshot":false,"emailRequired":true},{"type":"other","subtypes":[],"rating":true,"picker":false,"snapshot":true,"emailRequired":false}];
+  var LANGS = {"en":"English","sh":"Balkan","de":"Deutsch","fr":"Français","es":"Español","es-MX":"Español (México)","pt-BR":"Português (Brasil)","it":"Italiano","pl":"Polski","nl":"Nederlands","tr":"Türkçe","sv":"Svenska","ro":"Română","id":"Bahasa Indonesia","vi":"Tiếng Việt","uk":"Українська","ru":"Русский","ar":"العربية","hi":"हिन्दी","ja":"日本語","ko":"한국어","zh-Hans":"简体中文"};
+  /* @generated:end */
+
+  var opts = null, cfg = null, fab = null, overlay = null, lastFocus = null, started = false;
   var state = freshState();
   var errors = [], failed = [];
+  var handlers = {}, i18nCache = {};
 
   function freshState() {
     return { view: 'choose', type: '', subtype: '', message: '', rating: 0, email: '', tech: true, consent: false, parts: { messages: true, forms: true, tables: true }, picked: null, error: '', sending: false, openedAt: 0, restored: false };
@@ -13,7 +41,7 @@
   function keep(list, value) { list.push(value); if (list.length > 5) { list.shift(); } }
   function ours(node) { return !!(node && node.closest && node.closest('.rf-ui')); }
   function t(key, params) {
-    var s = (cfg && cfg.strings && cfg.strings[key]) || key;
+    var s = (cfg && cfg.strings && cfg.strings[key]) || EN[key] || key;
     if (params) { Object.keys(params).forEach(function (k) { s = s.split('{' + k + '}').join(String(params[k])); }); }
     return s;
   }
@@ -27,8 +55,21 @@
     (kids || []).forEach(function (c) { if (c) { n.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); } });
     return n;
   }
+  function assign(target) {
+    for (var i = 1; i < arguments.length; i++) { var s = arguments[i]; if (s) { Object.keys(s).forEach(function (k) { if (s[k] !== undefined) { target[k] = s[k]; } }); } }
+    return target;
+  }
 
-  /* ---------- masking (the server masks again) ---------- */
+  /* ---------- events ---------- */
+  function emit(name, detail) {
+    (handlers[name] || []).slice().forEach(function (fn) { try { fn(detail); } catch (e) { /* a listener must not break the widget */ } });
+    if (opts && opts.on && typeof opts.on[name] === 'function') { try { opts.on[name](detail); } catch (e) { /* ignore */ } }
+    try { document.dispatchEvent(new CustomEvent('rapttor-feedback:' + name, { detail: detail })); } catch (e) { /* old browsers */ }
+  }
+  function on(name, fn) { (handlers[name] = handlers[name] || []).push(fn); return function () { off(name, fn); }; }
+  function off(name, fn) { handlers[name] = (handlers[name] || []).filter(function (f) { return f !== fn; }); }
+
+  /* ---------- masking (a server must mask again) ---------- */
   var SENSITIVE = /pass|pwd|token|secret|card|cvv|cvc|iban|csrf|otp|\bpin\b|ssn|api[-_]?key|auth/i;
   function mask(s) {
     s = String(s);
@@ -39,43 +80,94 @@
   }
   function clip(s, n) { s = String(s || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n) : s; }
 
-  /* ---------- buffers for technical details ---------- */
-  function own(u) { return String(u || '').indexOf('/feedback/') !== -1; }
+  /* ---------- buffers for technical details (installed once per page) ---------- */
+  function own(u) {
+    u = String(u || '');
+    return u.indexOf('/feedback/') !== -1 || !!(opts && opts.submitUrl && u.indexOf(opts.submitUrl) === 0);
+  }
   function rec(m, u, s) { return { method: String(m || 'GET').toUpperCase(), url: String(u || '').split('?')[0].split('#')[0], status: s }; }
-  window.addEventListener('error', function (e) { keep(errors, clip((e.message || 'error') + ' @ ' + String(e.filename || '').split('?')[0].split('/').pop() + ':' + (e.lineno || 0), 300)); });
-  window.addEventListener('unhandledrejection', function (e) { keep(errors, clip('unhandled rejection: ' + (e.reason && e.reason.message ? e.reason.message : e.reason), 300)); });
-  try {
-    if (window.fetch) {
-      var origFetch = window.fetch;
-      window.fetch = function (input, init) {
-        var m = (init && init.method) || (input && input.method) || 'GET';
-        var u = typeof input === 'string' ? input : (input && input.url) || '';
-        return origFetch.apply(this, arguments).then(function (r) { if (r && r.status >= 400 && !own(u)) { keep(failed, rec(m, u, r.status)); } return r; },
-          function (err) { if (!own(u)) { keep(failed, rec(m, u, 0)); } throw err; });
+  if (!window.__rfHooks) {
+    window.__rfHooks = true;
+    window.addEventListener('error', function (e) { keep(errors, clip((e.message || 'error') + ' @ ' + String(e.filename || '').split('?')[0].split('/').pop() + ':' + (e.lineno || 0), 300)); });
+    window.addEventListener('unhandledrejection', function (e) { keep(errors, clip('unhandled rejection: ' + (e.reason && e.reason.message ? e.reason.message : e.reason), 300)); });
+    try {
+      if (window.fetch) {
+        var origFetch = window.fetch;
+        window.fetch = function (input, init) {
+          var m = (init && init.method) || (input && input.method) || 'GET';
+          var u = typeof input === 'string' ? input : (input && input.url) || '';
+          return origFetch.apply(this, arguments).then(function (r) { if (r && r.status >= 400 && !own(u)) { keep(failed, rec(m, u, r.status)); } return r; },
+            function (err) { if (!own(u)) { keep(failed, rec(m, u, 0)); } throw err; });
+        };
+      }
+      var xo = XMLHttpRequest.prototype.open;
+      XMLHttpRequest.prototype.open = function (m, u) {
+        var self = this;
+        this.addEventListener('loadend', function () { if ((self.status >= 400 || self.status === 0) && !own(u)) { keep(failed, rec(m, u, self.status)); } });
+        return xo.apply(this, arguments);
       };
+    } catch (e) { /* never break the page */ }
+  }
+
+  /* ---------- site colours: the widget looks like the page it is on ---------- */
+  function rgbOf(value) {
+    var m = String(value || '').match(/rgba?\(([^)]+)\)/);
+    if (!m) { return null; }
+    var p = m[1].split(/[\s,\/]+/).filter(Boolean).map(parseFloat);
+    return { r: p[0], g: p[1], b: p[2], a: p.length > 3 && !isNaN(p[3]) ? p[3] : 1 };
+  }
+  function lum(c) {   // relative luminance, 0 (black) to 1 (white)
+    var f = function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b);
+  }
+  function css(c) { return 'rgb(' + Math.round(c.r) + ',' + Math.round(c.g) + ',' + Math.round(c.b) + ')'; }
+  function colorOfValue(v) {   // any CSS colour (hex, name, hsl, var result) as rgb, by letting the browser compute it
+    v = String(v || '').trim();
+    if (!v) { return null; }
+    var probe = document.createElement('span');
+    probe.style.color = v;
+    if (!probe.style.color) { return null; }
+    probe.style.display = 'none';
+    document.body.appendChild(probe);
+    var c = rgbOf(getComputedStyle(probe).color);
+    probe.remove();
+    return c;
+  }
+  /** Reads background, text and brand colour from the page and offers them as --rf-site-* (explicit --rf-* variables of the site still win). */
+  function adoptSiteColors() {
+    if (!opts || opts.siteColors === false || !document.body) { return; }
+    var root = document.documentElement, st = root.style, bg = null, fg = null, accent = null, i;
+    var layers = [document.body, root];
+    for (i = 0; i < layers.length && !bg; i++) { var c = rgbOf(getComputedStyle(layers[i]).backgroundColor); if (c && c.a > 0.6) { bg = c; } }
+    fg = rgbOf(getComputedStyle(document.body).color);
+    var vars = ['--bs-primary', '--primary', '--color-primary', '--brand', '--accent', '--theme-color'], cs = getComputedStyle(root);
+    for (i = 0; i < vars.length && !accent; i++) { accent = colorOfValue(cs.getPropertyValue(vars[i])); }
+    if (!accent) {   // the colour links have is usually the brand colour, unless it is a grey
+      var link = document.querySelector('main a, a');
+      var lc = link && rgbOf(getComputedStyle(link).color);
+      if (lc && (Math.max(lc.r, lc.g, lc.b) - Math.min(lc.r, lc.g, lc.b)) > 40) { accent = lc; }
     }
-    var xo = XMLHttpRequest.prototype.open;
-    XMLHttpRequest.prototype.open = function (m, u) {
-      var self = this;
-      this.addEventListener('loadend', function () { if ((self.status >= 400 || self.status === 0) && !own(u)) { keep(failed, rec(m, u, self.status)); } });
-      return xo.apply(this, arguments);
-    };
-  } catch (e) { /* never break the page */ }
+    if (bg) { st.setProperty('--rf-site-bg', css(bg)); }
+    if (fg) { st.setProperty('--rf-site-fg', css(fg)); }
+    if (accent) {
+      st.setProperty('--rf-site-accent', css(accent));
+      st.setProperty('--rf-site-accent-fg', lum(accent) > 0.5 ? '#111' : '#fff');   // readable text on the accent
+    }
+  }
 
   /* ---------- preference cookie: h=1 (closed), x,y = button position as fractions ---------- */
   function getPref() {
     var out = {};
     try {
-      var m = document.cookie.match(new RegExp('(?:^|; )' + cfgCookie() + '=([^;]*)'));
+      var m = document.cookie.match(new RegExp('(?:^|; )' + opts.cookie.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]*)'));
       if (m) { decodeURIComponent(m[1]).split('&').forEach(function (p) { var kv = p.split('='); if (kv[0]) { out[kv[0]] = kv[1]; } }); }
     } catch (e) { /* ignore */ }
     return out;
   }
   function setPref(p) {
     var v = Object.keys(p).filter(function (k) { return p[k] !== '' && p[k] !== undefined && p[k] !== null; }).map(function (k) { return k + '=' + p[k]; }).join('&');
-    document.cookie = cfgCookie() + '=' + encodeURIComponent(v) + '; path=/; max-age=31536000' + (location.protocol === 'https:' ? '; SameSite=Lax; Secure' : '');
+    document.cookie = opts.cookie + '=' + encodeURIComponent(v) + '; path=/; max-age=31536000' + (location.protocol === 'https:' ? '; SameSite=Lax; Secure' : '');
   }
-  function cfgCookie() { return (root && root.dataset.cookie) || 'rapttor_fb'; }
 
   /* ---------- floating button ---------- */
   var ICON = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>';
@@ -88,15 +180,24 @@
     fab.style.top = Math.round(Math.max(0, Math.min(1, parseFloat(p.y))) * Math.max(0, innerHeight - h)) + 'px';
   }
   function showFab() {
+    if (!opts) { return; }
     var p = getPref(); delete p.h; setPref(p);
     drawFab();
   }
+  function refreshFab() {   // texts arrive after the first draw when they come from a language file
+    if (!fab) { return; }
+    var label = fab.querySelector('.rf-fab-label'), x = fab.querySelector('.rf-fab-x');
+    if (label) { label.textContent = opts.label || t('fab.label'); }
+    if (x) { var c = opts.closeLabel || t('fab.close'); x.setAttribute('aria-label', c); x.title = c; }
+  }
   function drawFab() {
-    if (!root || fab) { return; }
-    var x = el('button', { type: 'button', class: 'rf-fab-x', 'aria-label': root.dataset.close, title: root.dataset.close, text: '×' });
+    if (!opts || fab || opts.button === false || opts.routeHidden) { return; }
+    adoptSiteColors();
+    var closeText = opts.closeLabel || t('fab.close');
+    var x = el('button', { type: 'button', class: 'rf-fab-x', 'aria-label': closeText, title: closeText, text: '×' });
     var main = el('button', { type: 'button', class: 'rf-fab-main' });
     main.innerHTML = ICON;
-    main.appendChild(el('span', { class: 'rf-fab-label', text: root.dataset.label }));
+    main.appendChild(el('span', { class: 'rf-fab-label', text: opts.label || t('fab.label') }));
     fab = el('div', { class: 'rf-ui rf-fab' }, [main, x]);
     document.body.appendChild(fab);
     place();
@@ -132,13 +233,49 @@
     main.addEventListener('pointerup', end);
     main.addEventListener('pointercancel', end);
     main.addEventListener('click', function (e) { if (moved) { e.preventDefault(); return; } open(); });
-    x.addEventListener('click', function () { hideFab(); });
+    x.addEventListener('click', function () { askHide(); });
   }
   function hideFab() {
+    if (!opts) { return; }
+    closeConfirm();
     var p = getPref(); p.h = 1; setPref(p);
     if (fab) { fab.remove(); fab = null; }
   }
-  window.addEventListener('resize', place);
+
+  /* The close "x" asks first: a small popover on the button, "Keep" is focused. (The switch in the dialog hides without asking.) */
+  function closeConfirm() {
+    document.removeEventListener('keydown', confirmKey, true);
+    document.removeEventListener('mousedown', confirmOutside, true);
+    var box = fab && fab.querySelector('.rf-confirm');
+    if (box) { box.remove(); var m = fab.querySelector('.rf-fab-main'); if (m) { m.focus(); } }
+  }
+  function confirmKey(e) { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeConfirm(); } }
+  function confirmOutside(e) { if (fab && !fab.querySelector('.rf-confirm').contains(e.target) && !e.target.closest('.rf-fab-x')) { closeConfirm(); } }
+  function askHide() {
+    if (!fab) { return; }
+    if (opts.confirmHide === false) { hideFab(); return; }
+    if (fab.querySelector('.rf-confirm')) { closeConfirm(); return; }
+    (cfg ? Promise.resolve() : loadConfig(opts.lang)).then(function () {
+      if (!fab || fab.querySelector('.rf-confirm')) { return; }
+      refreshFab();
+      var no = el('button', { type: 'button', class: 'rf-secondary rf-small', text: t('fab.confirm.no'), onclick: closeConfirm });
+      var yes = el('button', { type: 'button', class: 'rf-primary rf-small', text: t('fab.confirm.yes'), onclick: hideFab });
+      var box = el('div', { class: 'rf-confirm', role: 'alertdialog', dir: cfg.dir, 'aria-labelledby': 'rf-confirm-t', 'aria-describedby': 'rf-confirm-d' }, [
+        el('strong', { id: 'rf-confirm-t', text: t('fab.confirm') }), el('span', { id: 'rf-confirm-d', text: t('fab.confirm.hint') }),
+        el('div', { class: 'rf-actions' }, [no, yes])
+      ]);
+      fab.classList.remove('rf-below', 'rf-start');
+      fab.appendChild(box);
+      // default: above the button, aligned to its right edge; measure where it really lands and flip when it would leave the screen
+      var vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight, b = box.getBoundingClientRect();
+      if (b.top < 8) { fab.classList.add('rf-below'); }
+      if (b.left < 8 || b.right > vw - 8) { fab.classList.add('rf-start'); b = box.getBoundingClientRect(); if (b.right > vw - 8) { fab.classList.remove('rf-start'); } }
+      if (box.getBoundingClientRect().bottom > vh - 8 && !fab.classList.contains('rf-below')) { /* no room below either: stay above */ }
+      no.focus();
+      document.addEventListener('keydown', confirmKey, true);
+      document.addEventListener('mousedown', confirmOutside, true);
+    }).catch(function () { hideFab(); });   // texts cannot be loaded: do what the person asked
+  }
 
   /* ---------- page snapshot ---------- */
   function visible(n) {
@@ -224,6 +361,7 @@
       document.removeEventListener('mousemove', move, true); document.removeEventListener('click', click, true); document.removeEventListener('keydown', key, true);
       document.documentElement.classList.remove('rf-picking');
       box.remove(); tip.remove();
+      if (!overlay) { return; }
       overlay.style.display = ''; if (fab) { fab.style.display = ''; }
       if (chosen) {
         var r = chosen.getBoundingClientRect();
@@ -243,13 +381,47 @@
     document.addEventListener('mousemove', move, true); document.addEventListener('click', click, true); document.addEventListener('keydown', key, true);
   }
 
-  /* ---------- dialog ---------- */
-  function typeDef(name) { return (cfg.types || []).filter(function (x) { return x.type === name; })[0]; }
-  function draftSave() { try { localStorage.setItem('rapttor_fb_draft', JSON.stringify({ type: state.type, subtype: state.subtype, message: state.message, rating: state.rating, email: state.email })); } catch (e) { /* ignore */ } }
-  function draftLoad() { try { return JSON.parse(localStorage.getItem('rapttor_fb_draft') || 'null'); } catch (e) { return null; } }
-  function draftClear() { try { localStorage.removeItem('rapttor_fb_draft'); } catch (e) { /* ignore */ } }
+  /* ---------- configuration: from the server (Yii) or built here ---------- */
+  function resolveLang(l) {
+    l = String(l || '').replace('_', '-');
+    var codes = Object.keys(LANGS), i;
+    for (i = 0; i < codes.length; i++) { if (codes[i].toLowerCase() === l.toLowerCase()) { return codes[i]; } }
+    var base = l.split('-')[0].toLowerCase();
+    if (['sh', 'sr', 'hr', 'bs', 'cnr'].indexOf(base) !== -1) { return 'sh'; }
+    if (base === 'zh') { return 'zh-Hans'; }
+    if (base === 'pt') { return 'pt-BR'; }
+    return LANGS[base] ? base : 'en';
+  }
+  function loadStrings(code) {
+    if (code === 'en' || !opts.i18nUrl) { return Promise.resolve(assign({}, EN, opts.strings)); }
+    if (i18nCache[code]) { return Promise.resolve(assign({}, EN, i18nCache[code], opts.strings)); }
+    return fetch(opts.i18nUrl.replace(/\/?$/, '/') + code + '.json', { headers: { Accept: 'application/json' } })
+      .then(function (r) { if (!r.ok) { throw new Error('i18n ' + r.status); } return r.json(); })
+      .then(function (j) { i18nCache[code] = j; return assign({}, EN, j, opts.strings); })
+      .catch(function () { return assign({}, EN, opts.strings); });
+  }
+  function buildTypes(strings) {
+    var defs = opts.types || DEFAULT_TYPES;
+    return defs.filter(function (d) { return !opts.only || opts.only.indexOf(d.type) !== -1; }).map(function (d) {
+      var subs = (d.subtypes || []).map(function (s) { return typeof s === 'string' ? { value: s, label: strings['sub.' + d.type + '.' + s] || s } : s; });
+      return { type: d.type, label: d.label || strings['type.' + d.type] || d.type, hint: d.hint || strings['type.' + d.type + '.hint'] || '', subtypes: subs,
+        rating: !!d.rating, picker: !!d.picker, snapshot: !!d.snapshot, emailRequired: !!d.emailRequired };
+    });
+  }
+  function localConfig(lang) {
+    var code = resolveLang(lang);
+    return loadStrings(code).then(function (strings) {
+      return { lang: code, dir: code === 'ar' ? 'rtl' : 'ltr', strings: strings, types: buildTypes(strings), token: '', pow: 0, captureMode: opts.captureMode, maskEmails: !!opts.maskEmails, signedIn: !!opts.signedIn };
+    });
+  }
+  function csrfToken() {
+    if (typeof opts.csrf === 'function') { return opts.csrf(); }
+    if (opts.csrf) { return opts.csrf; }
+    var m = document.querySelector('meta[name="csrf-token"]');
+    return m ? m.getAttribute('content') : '';
+  }
 
-  /* Proof of work for visitors: find a nonce so sha256(token:nonce) has `bits` leading zero bits; runs while the person types. */
+  /* Proof of work asked by the server for visitors: find a nonce so sha256(token:nonce) has `bits` leading zero bits; runs while the person types. */
   var powJob = null;
   function solvePow(token, bits) {
     if (!bits || !window.crypto || !crypto.subtle) { return Promise.resolve(''); }
@@ -269,26 +441,41 @@
     });
   }
   function loadConfig(lang) {
-    return fetch(root.dataset.config + '?lang=' + encodeURIComponent(lang), { credentials: 'same-origin', headers: { Accept: 'application/json' } })
-      .then(function (r) { if (!r.ok) { throw new Error('config ' + r.status); } return r.json(); })
-      .then(function (c) { cfg = c; state.openedAt = Date.now(); powJob = solvePow(c.token, c.pow); });
+    var job = opts.configUrl
+      ? fetch(opts.configUrl + (opts.configUrl.indexOf('?') === -1 ? '?' : '&') + 'lang=' + encodeURIComponent(lang), { credentials: opts.credentials, headers: assign({ Accept: 'application/json' }, opts.headers) })
+        .then(function (r) { if (!r.ok) { throw new Error('config ' + r.status); } return r.json(); })
+      : localConfig(lang);
+    return job.then(function (c) {
+      c.strings = assign({}, EN, c.strings);
+      cfg = c; state.openedAt = Date.now(); powJob = solvePow(c.token, c.pow);
+    });
   }
 
-  function open(opts) {
-    opts = opts || {};
-    if (!root || overlay) { return; }
+  /* ---------- dialog ---------- */
+  function typeDef(name) { return (cfg.types || []).filter(function (x) { return x.type === name; })[0]; }
+  function draftSave() { try { localStorage.setItem(opts.draftKey, JSON.stringify({ type: state.type, subtype: state.subtype, message: state.message, rating: state.rating, email: state.email })); } catch (e) { /* ignore */ } }
+  function draftLoad() { try { return JSON.parse(localStorage.getItem(opts.draftKey) || 'null'); } catch (e) { return null; } }
+  function draftClear() { try { localStorage.removeItem(opts.draftKey); } catch (e) { /* ignore */ } }
+
+  function open(o) {
+    o = o || {};
+    if (!opts || overlay) { return Promise.resolve(); }
     lastFocus = document.activeElement;
-    var lang = (cfg && cfg.lang) || root.dataset.lang;
-    loadConfig(lang).then(function () {
+    adoptSiteColors();   // the site may have changed theme since the button was drawn
+    var lang = (cfg && cfg.lang) || opts.lang;
+    return loadConfig(lang).then(function () {
       state = freshState();
+      if (opts.email) { state.email = opts.email; }
       var d = draftLoad();
-      if (opts.type && typeDef(opts.type)) { state.type = opts.type; state.view = 'form'; }
-      else if (d && d.message && typeDef(d.type)) { state.type = d.type; state.subtype = d.subtype || ''; state.message = d.message; state.rating = d.rating || 0; state.email = d.email || ''; state.view = 'form'; state.restored = true; }
+      if (o.type && typeDef(o.type)) { state.type = o.type; state.view = 'form'; }
+      else if (d && d.message && typeDef(d.type)) { state.type = d.type; state.subtype = d.subtype || ''; state.message = d.message; state.rating = d.rating || 0; state.email = d.email || state.email; state.view = 'form'; state.restored = true; }
+      else if (cfg.types.length === 1) { state.type = cfg.types[0].type; state.view = 'form'; }
       overlay = el('div', { class: 'rf-ui rf-overlay', dir: cfg.dir });
       overlay.addEventListener('mousedown', function (e) { if (e.target === overlay) { close(); } });
       document.body.appendChild(overlay);
       document.addEventListener('keydown', onKey, true);
       render();
+      emit('open', { type: state.type || null });
     }).catch(function () { /* silently not available */ });
   }
   function close() {
@@ -296,6 +483,7 @@
     document.removeEventListener('keydown', onKey, true);
     overlay.remove(); overlay = null;
     if (lastFocus && lastFocus.focus) { try { lastFocus.focus(); } catch (e) { /* ignore */ } }
+    emit('close', {});
   }
   function onKey(e) {
     if (!overlay || overlay.style.display === 'none') { return; }
@@ -315,8 +503,8 @@
     overlay.dir = cfg.dir;
     var head = [el('h2', { id: 'rf-title', class: 'rf-title', text: t('dialog.title') })];
     var bar = [];
-    if (root.dataset.selector === '1') {
-      var langs = JSON.parse(root.dataset.languages || '{}');
+    if (opts.selector && opts.languages) {
+      var langs = opts.languages;
       var sel = el('select', { class: 'rf-lang', 'aria-label': t('dialog.language'), onchange: function (e) { sync(); loadConfig(e.target.value).then(render); } },
         Object.keys(langs).map(function (c) { return el('option', { value: c, text: langs[c], selected: c === cfg.lang }); }));
       bar.push(sel);
@@ -326,10 +514,17 @@
       el('div', { class: 'rf-head' }, [head[0], el('div', { class: 'rf-bar' }, bar)]),
       state.view === 'choose' ? viewChoose() : state.view === 'thanks' ? viewThanks() : viewForm()
     ]);
+    if (opts.button !== false) { dlg.appendChild(footer()); }
     overlay.appendChild(dlg);
     overlay.rfShown = true;
     var focusTarget = dlg.querySelector('textarea, .rf-tile, .rf-primary');
     if (focusTarget) { focusTarget.focus(); }
+  }
+  /* "Show the feedback button on pages": the way back after closing it (the menu link opens this dialog). */
+  function footer() {
+    var cb = el('input', { type: 'checkbox', checked: !getPref().h && !opts.hidden });
+    cb.addEventListener('change', function () { if (cb.checked) { showFab(); } else { hideFab(); } });
+    return el('div', { class: 'rf-foot' }, [el('label', { class: 'rf-check-row small' }, [cb, el('span', { text: t('fab.toggle') })])]);
   }
   function sync() {
     var m = overlay && overlay.querySelector('.rf-message'), em = overlay && overlay.querySelector('.rf-email');
@@ -350,7 +545,7 @@
       el('h3', { text: t('thanks.title') }),
       el('p', { text: t('thanks.text') }),
       el('div', { class: 'rf-actions' }, [
-        el('button', { type: 'button', class: 'rf-secondary', onclick: function () { state = freshState(); render(); }, text: t('thanks.again') }),
+        el('button', { type: 'button', class: 'rf-secondary', onclick: function () { state = freshState(); if (opts.email) { state.email = opts.email; } render(); }, text: t('thanks.again') }),
         el('button', { type: 'button', class: 'rf-primary', onclick: close, text: t('dialog.close') })
       ])
     ]);
@@ -359,14 +554,14 @@
   function viewForm() {
     var ty = typeDef(state.type) || cfg.types[0], k = [];
     k.push(el('div', { class: 'rf-row' }, [
-      el('button', { type: 'button', class: 'rf-link', onclick: function () { sync(); state.view = 'choose'; render(); }, text: '‹ ' + t('dialog.back') }),
+      cfg.types.length > 1 ? el('button', { type: 'button', class: 'rf-link', onclick: function () { sync(); state.view = 'choose'; render(); }, text: '‹ ' + t('dialog.back') }) : el('span'),
       el('strong', { class: 'rf-typename', text: ty.label })
     ]));
     if (state.restored) { k.push(el('p', { class: 'rf-note', text: t('draft.restored') })); }
     if (ty.subtypes.length) {
       k.push(el('div', { class: 'rf-chips', role: 'radiogroup' }, ty.subtypes.map(function (s) {
         return el('button', { type: 'button', role: 'radio', 'aria-checked': state.subtype === s.value ? 'true' : 'false', class: 'rf-chip' + (state.subtype === s.value ? ' on' : ''),
-          onclick: function (e) { state.subtype = state.subtype === s.value ? '' : s.value; draftSave(); sync(); render(); }, text: s.label });
+          onclick: function () { state.subtype = state.subtype === s.value ? '' : s.value; draftSave(); sync(); render(); }, text: s.label });
       })));
     }
     var ta = el('textarea', { class: 'rf-message', rows: '3', maxlength: '4000', placeholder: t('field.message.placeholder'), 'aria-label': t('field.message') });
@@ -396,7 +591,7 @@
       em.addEventListener('input', function () { state.email = em.value; draftSave(); });
       k.push(el('label', { class: 'rf-label' }, [ty.emailRequired ? t('field.email.required') : t('field.email'), em, el('small', { text: t('field.email.hint') })]));
     }
-    if (ty.snapshot) { k.push(consentBlock()); }
+    if (ty.snapshot && opts.snapshot !== false) { k.push(consentBlock()); }
     k.push(el('label', { class: 'rf-check-row' }, [
       el('input', { type: 'checkbox', checked: state.tech, onchange: function (e) { state.tech = e.target.checked; } }),
       el('span', {}, [el('strong', { text: t('tech.title') }), el('small', { text: t('tech.small') })])
@@ -447,42 +642,130 @@
     if (!ty) { state.error = t('error.type'); return render(); }
     if (clip(state.message, 4000).length < 3) { state.error = t('error.message'); return render(); }
     if (!cfg.signedIn && (ty.emailRequired || state.email) && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(state.email)) { state.error = t('error.email'); return render(); }
-    var snap = ty.snapshot && consentBlock.current ? consentBlock.current.collect() : null, parts = Object.keys(state.parts).filter(function (p) { return state.parts[p]; });
+    var snap = ty.snapshot && opts.snapshot !== false && consentBlock.current ? consentBlock.current.collect() : null, parts = Object.keys(state.parts).filter(function (p) { return state.parts[p]; });
     var body = {
       type: state.type, subtype: state.subtype, message: state.message, rating: state.rating || null, email: state.email,
-      lang: cfg.lang, route: root.dataset.route, url: location.pathname, token: cfg.token,
+      lang: cfg.lang, route: opts.route, url: location.pathname, token: cfg.token,
       website: (overlay.querySelector('.rf-hp') || {}).value || '', tech: state.tech,
-      context: state.tech ? { ua: navigator.userAgent, viewport: [innerWidth, innerHeight], lang: document.documentElement.lang, theme: document.documentElement.getAttribute('data-bs-theme') || document.documentElement.getAttribute('data-theme') || '', release: root.dataset.release || '', errors: errors, failed: failed, picked: state.picked } : null,
+      context: state.tech ? { ua: navigator.userAgent, viewport: [innerWidth, innerHeight], lang: document.documentElement.lang, theme: document.documentElement.getAttribute('data-bs-theme') || document.documentElement.getAttribute('data-theme') || '', release: opts.release || '', errors: errors, failed: failed, picked: state.picked } : null,
       snapshot_consent: snap ? 1 : 0, snapshot_parts: snap ? parts : [], snapshot: snap
     };
+    if (opts.extra) { body.extra = typeof opts.extra === 'function' ? opts.extra() : opts.extra; }
     state.sending = true; state.error = ''; render();
-    (powJob || Promise.resolve('')).then(function (nonce) { body.pow = nonce; send(body); });
+    (powJob || Promise.resolve('')).then(function (nonce) { if (nonce) { body.pow = nonce; } send(body); });
+  }
+  function fail(err, code) {
+    state.sending = false;
+    state.error = code === 'limit' ? t('error.limit') : code === 'message' ? t('error.message') : code === 'email' ? t('error.email') : code === 'type' ? t('error.type') : code === 'network' ? t('error.network') : t('error.generic');
+    emit('error', { code: code || 'generic', error: err || null });
+    if (opts.configUrl && (code === 'token' || code === 'fast' || code === 'pow')) { return loadConfig(cfg.lang).then(function () { state.error = t('error.generic'); render(); }); }
+    render();
+  }
+  function done(body) {
+    state.sending = false;
+    draftClear();
+    var keepCfg = cfg; state = freshState(); state.view = 'thanks'; cfg = keepCfg;
+    render();
+    emit('sent', { type: body.type, subtype: body.subtype, rating: body.rating });
   }
   function send(body) {
-    var headers = { 'Content-Type': 'application/json', Accept: 'application/json' };
-    headers['X-CSRF-Token'] = root.dataset.csrf;
-    fetch(root.dataset.submit, { method: 'POST', credentials: 'same-origin', headers: headers, body: JSON.stringify(body) })
+    if (typeof opts.onSubmit === 'function') {
+      Promise.resolve().then(function () { return opts.onSubmit(body); })
+        .then(function (res) { if (res && res.ok === false) { fail(res, res.code); } else { done(body); } },
+          function (err) { fail(err, err && err.code); });
+      return;
+    }
+    if (!opts.submitUrl) { fail(null, 'generic'); return; }
+    var headers = assign({ 'Content-Type': 'application/json', Accept: 'application/json' }, opts.headers);
+    var token = csrfToken();
+    if (token) { headers[opts.csrfHeader] = token; }
+    fetch(opts.submitUrl, { method: 'POST', credentials: opts.credentials, headers: headers, body: JSON.stringify(body) })
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { status: r.status, json: j }; }); })
       .then(function (res) {
-        state.sending = false;
-        if (res.status === 200 && res.json.ok) { draftClear(); var keepLang = cfg; state = freshState(); state.view = 'thanks'; cfg = keepLang; return render(); }
-        var c = res.json && res.json.code;
-        state.error = res.status === 429 ? t('error.limit') : c === 'message' ? t('error.message') : c === 'email' ? t('error.email') : c === 'type' ? t('error.type') : t('error.generic');
-        if (c === 'token' || c === 'fast' || c === 'pow') { return loadConfig(cfg.lang).then(function () { state.error = t('error.generic'); render(); }); }
-        render();
+        if (res.status >= 200 && res.status < 300 && res.json.ok !== false) { done(body); return; }
+        fail(res.json, res.status === 429 ? 'limit' : (res.json && res.json.code) || 'generic');
       })
-      .catch(function () { state.sending = false; state.error = t('error.network'); render(); });
+      .catch(function (err) { fail(err, 'network'); });
   }
 
-  /* ---------- start ---------- */
-  document.addEventListener('click', function (e) {
+  /* ---------- start / stop ---------- */
+  function onDocClick(e) {
     var n = e.target.closest && e.target.closest('[data-feedback-open]');
     if (n) { e.preventDefault(); open({ type: n.getAttribute('data-feedback-open') || n.getAttribute('data-feedback-type') || undefined }); }
-  });
-  function start() {
-    root = document.getElementById('rapttor-feedback');
-    if (root && root.dataset.hidden !== '1') { drawFab(); }
   }
-  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', start); } else { start(); }
-  window.Feedback = { version: VERSION, open: open, show: showFab, hide: hideFab };
+  function onResize() { place(); }
+
+  /** Options from the data attributes of <div id="rapttor-feedback"> (what the Yii widget renders; also usable by hand). */
+  function rootOptions(r) {
+    if (!r) { return {}; }
+    var d = r.dataset, o = {};
+    function flag(v) { return v === '1' || v === 'true'; }
+    if (d.config) { o.configUrl = d.config; }
+    if (d.submit) { o.submitUrl = d.submit; }
+    if (d.i18nUrl) { o.i18nUrl = d.i18nUrl; }
+    if (d.route) { o.route = d.route; }
+    if (d.lang) { o.lang = d.lang; }
+    if (d.languages) { try { o.languages = JSON.parse(d.languages); } catch (e) { /* ignore */ } }
+    if (d.selector !== undefined) { o.selector = flag(d.selector); }
+    if (d.hidden !== undefined) { o.hidden = flag(d.hidden); }
+    if (d.routeHidden !== undefined) { o.routeHidden = flag(d.routeHidden); }
+    if (d.confirmHide !== undefined) { o.confirmHide = flag(d.confirmHide); }
+    if (d.siteColors !== undefined) { o.siteColors = flag(d.siteColors); }
+    if (d.button !== undefined) { o.button = flag(d.button); }
+    if (d.cookie) { o.cookie = d.cookie; }
+    if (d.csrf) { o.csrf = d.csrf; }
+    if (d.release) { o.release = d.release; }
+    if (d.label) { o.label = d.label; }
+    if (d.close) { o.closeLabel = d.close; }
+    if (d.captureMode) { o.captureMode = d.captureMode; }
+    if (d.maskEmails !== undefined) { o.maskEmails = flag(d.maskEmails); }
+    if (d.signedIn !== undefined) { o.signedIn = flag(d.signedIn); }
+    if (d.email) { o.email = d.email; }
+    return o;
+  }
+
+  /**
+   * Start or restart. Options (all optional):
+   *   submitUrl, configUrl, i18nUrl, onSubmit(payload)  where the feedback goes and where texts come from
+   *   lang, languages {code:name}, selector (show the language dropdown), strings {key:text}, types
+   *   signedIn, email, route, release, extra, only ['error','idea'], snapshot (false = no screen data option)
+   *   button (false = no floating button), hidden, routeHidden, confirmHide (false = no question when the button is closed), siteColors (false = do not read the page colours), cookie, label, closeLabel
+   *   captureMode 'all'|'marked', maskEmails, csrf (string|fn), csrfHeader, credentials, headers, draftKey, on {open,close,sent,error}
+   */
+  function init(o) {
+    destroy();
+    var rootEl = document.getElementById('rapttor-feedback');
+    opts = assign({
+      submitUrl: null, configUrl: null, i18nUrl: null, onSubmit: null,
+      lang: (document.documentElement.getAttribute('lang') || 'en'), languages: null, selector: false, strings: null, types: null, only: null,
+      signedIn: false, email: '', route: location.pathname, release: '', extra: null, snapshot: true,
+      button: true, hidden: false, routeHidden: false, confirmHide: true, siteColors: true, cookie: 'rapttor_fb', label: '', closeLabel: '',
+      captureMode: 'all', maskEmails: false, csrf: null, csrfHeader: 'X-CSRF-Token', credentials: 'same-origin', headers: null, draftKey: 'rapttor_fb_draft', on: null
+    }, rootOptions(rootEl), o);
+    if (opts.selector && !opts.languages) { opts.languages = LANGS; }
+    started = true;
+    document.addEventListener('click', onDocClick);
+    window.addEventListener('resize', onResize);
+    if (!opts.hidden && !getPref().h) { drawFab(); }
+    if (!opts.configUrl && !opts.strings && opts.i18nUrl && resolveLang(opts.lang) !== 'en') { loadConfig(opts.lang).then(refreshFab).catch(function () { /* English stays */ }); }
+    return api;
+  }
+  function destroy() {
+    if (overlay) { overlay.remove(); overlay = null; document.removeEventListener('keydown', onKey, true); }
+    if (fab) { fab.remove(); fab = null; }
+    if (started) { document.removeEventListener('click', onDocClick); window.removeEventListener('resize', onResize); started = false; }
+    document.documentElement.classList.remove('rf-picking');
+    cfg = null; opts = null; state = freshState();
+  }
+
+  var api = {
+    version: VERSION, init: init, destroy: destroy, open: open, close: close, show: showFab, hide: hideFab, on: on, off: off,
+    isOpen: function () { return !!overlay; }, languages: LANGS
+  };
+  window.Feedback = api;
+  if (typeof module === 'object' && module.exports) { module.exports = api; }
+
+  /* The Yii widget renders <div id="rapttor-feedback" data-...>: start by ourselves, unless the page prevents it. */
+  function auto() { if (document.getElementById('rapttor-feedback') && window.FeedbackAutoInit !== false && !started) { init(); } }
+  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', auto); } else { auto(); }
 })();

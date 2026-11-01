@@ -4,6 +4,11 @@
 return [
     'fab.label' => 'Phản hồi',
     'fab.close' => 'Ẩn nút phản hồi',
+    'fab.confirm' => 'Ẩn nút phản hồi?',
+    'fab.confirm.hint' => 'Bạn có thể hiển thị lại bất cứ lúc nào từ mục Phản hồi trong menu.',
+    'fab.confirm.yes' => 'Ẩn',
+    'fab.confirm.no' => 'Giữ lại',
+    'fab.toggle' => 'Hiển thị nút phản hồi trên các trang',
     'dialog.title' => 'Gửi phản hồi cho chúng tôi',
     'dialog.close' => 'Đóng',
     'dialog.back' => 'Quay lại',

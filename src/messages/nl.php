@@ -4,6 +4,11 @@
 return [
     'fab.label' => 'Feedback',
     'fab.close' => 'Feedbackknop verbergen',
+    'fab.confirm' => 'Feedbackknop verbergen?',
+    'fab.confirm.hint' => 'Je kunt hem altijd terugzetten via de optie Feedback in het menu.',
+    'fab.confirm.yes' => 'Verbergen',
+    'fab.confirm.no' => 'Behouden',
+    'fab.toggle' => 'Feedbackknop op pagina’s tonen',
     'dialog.title' => 'Stuur ons uw feedback',
     'dialog.close' => 'Sluiten',
     'dialog.back' => 'Terug',

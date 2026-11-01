@@ -4,6 +4,11 @@
 return [
     'fab.label' => 'Povratne informacije',
     'fab.close' => 'Sakrij dugme za povratne informacije',
+    'fab.confirm' => 'Sakriti dugme za povratne informacije?',
+    'fab.confirm.hint' => 'Možete ga vratiti bilo kada preko opcije za povratne informacije u meniju.',
+    'fab.confirm.yes' => 'Sakrij',
+    'fab.confirm.no' => 'Zadrži',
+    'fab.toggle' => 'Prikaži dugme za povratne informacije na stranicama',
     'dialog.title' => 'Pošaljite nam povratnu informaciju',
     'dialog.close' => 'Zatvori',
     'dialog.back' => 'Nazad',

@@ -4,6 +4,11 @@
 return [
     'fab.label' => 'Feedback',
     'fab.close' => 'Nascondi il pulsante dei feedback',
+    'fab.confirm' => 'Nascondere il pulsante dei feedback?',
+    'fab.confirm.hint' => 'Puoi riattivarlo in qualsiasi momento dall’opzione Feedback nel menu.',
+    'fab.confirm.yes' => 'Nascondi',
+    'fab.confirm.no' => 'Mantieni',
+    'fab.toggle' => 'Mostra il pulsante dei feedback nelle pagine',
     'dialog.title' => 'Inviaci un feedback',
     'dialog.close' => 'Chiudi',
     'dialog.back' => 'Indietro',

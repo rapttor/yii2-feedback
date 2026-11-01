@@ -4,6 +4,11 @@
 return [
     'fab.label' => 'Feedback',
     'fab.close' => 'Feedback-Schaltfläche ausblenden',
+    'fab.confirm' => 'Feedback-Schaltfläche ausblenden?',
+    'fab.confirm.hint' => 'Sie können sie jederzeit über den Menüpunkt Feedback wieder einblenden.',
+    'fab.confirm.yes' => 'Ausblenden',
+    'fab.confirm.no' => 'Behalten',
+    'fab.toggle' => 'Feedback-Schaltfläche auf Seiten anzeigen',
     'dialog.title' => 'Senden Sie uns Ihr Feedback',
     'dialog.close' => 'Schließen',
     'dialog.back' => 'Zurück',

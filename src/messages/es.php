@@ -4,6 +4,11 @@
 return [
     'fab.label' => 'Opiniones',
     'fab.close' => 'Ocultar el botón de opiniones',
+    'fab.confirm' => '¿Ocultar el botón de opiniones?',
+    'fab.confirm.hint' => 'Puede volver a mostrarlo en cualquier momento desde la opción Opiniones del menú.',
+    'fab.confirm.yes' => 'Ocultar',
+    'fab.confirm.no' => 'Mantener',
+    'fab.toggle' => 'Mostrar el botón de opiniones en las páginas',
     'dialog.title' => 'Envíenos su opinión',
     'dialog.close' => 'Cerrar',
     'dialog.back' => 'Atrás',

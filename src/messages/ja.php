@@ -4,6 +4,11 @@
 return [
     'fab.label' => 'フィードバック',
     'fab.close' => 'フィードバックボタンを非表示',
+    'fab.confirm' => 'フィードバックボタンを非表示にしますか？',
+    'fab.confirm.hint' => 'メニューのフィードバックからいつでも再表示できます。',
+    'fab.confirm.yes' => '非表示',
+    'fab.confirm.no' => '表示したまま',
+    'fab.toggle' => 'ページにフィードバックボタンを表示',
     'dialog.title' => 'ご意見をお聞かせください',
     'dialog.close' => '閉じる',
     'dialog.back' => '戻る',

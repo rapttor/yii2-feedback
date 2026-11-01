@@ -4,6 +4,11 @@
 return [
     'fab.label' => 'ملاحظات',
     'fab.close' => 'إخفاء زر الملاحظات',
+    'fab.confirm' => 'إخفاء زر الملاحظات؟',
+    'fab.confirm.hint' => 'يمكنك إظهاره مرة أخرى في أي وقت من خيار ملاحظات في القائمة.',
+    'fab.confirm.yes' => 'إخفاء',
+    'fab.confirm.no' => 'إبقاء',
+    'fab.toggle' => 'إظهار زر الملاحظات في الصفحات',
     'dialog.title' => 'أرسل لنا ملاحظاتك',
     'dialog.close' => 'إغلاق',
     'dialog.back' => 'رجوع',

@@ -4,6 +4,11 @@
 return [
     'fab.label' => '피드백',
     'fab.close' => '피드백 버튼 숨기기',
+    'fab.confirm' => '피드백 버튼을 숨기시겠습니까?',
+    'fab.confirm.hint' => '메뉴의 피드백 옵션에서 언제든지 다시 표시할 수 있습니다.',
+    'fab.confirm.yes' => '숨기기',
+    'fab.confirm.no' => '유지',
+    'fab.toggle' => '페이지에 피드백 버튼 표시',
     'dialog.title' => '의견을 보내 주세요',
     'dialog.close' => '닫기',
     'dialog.back' => '뒤로',

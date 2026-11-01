@@ -20,6 +20,8 @@ Register the component in the web **and** console config. Only `class` and `app`
         // 'guests' => true,                      // false = signed-in users only
         // 'excludeRoutes' => ['feedback/*'],     // no widget at all on these routes (patterns, * allowed); feedback/* is always out
         // 'hiddenRoutes' => [],                  // only the floating button is hidden there; links and Feedback.open() still work, e.g. ['shop/checkout*']
+        // 'confirmHide' => true,                 // ask before the floating button is closed with its x (the switch in the dialog never asks)
+        // 'siteColors' => true,                  // read background, text and brand colour from the page so the widget looks like the site
 
         // what can be sent
         // 'types' => [                           // type => options; labels are in the message files: type.<t>, sub.<t>.<s>
@@ -76,6 +78,8 @@ The same options, explained. All keys are public properties of `Feedback`; the v
 | `types` | error, idea, report, other | types and their options (`subtypes`, `rating`, `picker`, `snapshot`, `emailRequired`, `priority`); texts are `type.<t>`, `sub.<t>.<s>` in the message files |
 | `excludeRoutes` | `['feedback/*']` | route patterns (`*` allowed) where the widget is **not offered at all** (no button, dialog or links); `feedback/*` is always out |
 | `hiddenRoutes` | `[]` | route patterns where **only the floating button** is hidden; links and `Feedback.open()` still work |
+| `confirmHide` | `true` | closing the floating button with its "x" asks first (a small popover, "Keep" focused); the switch inside the dialog hides without asking |
+| `siteColors` | `true` | read background, text and brand colour from the page (see Colours) |
 | `cookie` | `'rapttor_fb'` | preference cookie: button closed + position. **Set a name unique per app** (cookies ignore the port), e.g. `'fb-' . APP_SLUG`, and list it as a preference cookie in your legal texts |
 | `captureMode` | `'all'` | `all`: everything not masked; `marked`: only inside `data-feedback-capture` |
 | `maskEmails` | `false` | `true`: emails inside screen data become `[email]` (recommended for public use) |
@@ -92,12 +96,70 @@ The same options, explained. All keys are public properties of `Feedback`; the v
 
 ## Use
 
-- **Menu or footer link:** `<a href="#" data-feedback-open>Feedback</a>`; `data-feedback-open="idea"` jumps to a type. JS: `Feedback.open({type: 'error'})`.
-- **The button:** it has a close "x" (cookie `rapttor_fb`). Bring it back with `Feedback.show()` or PHP `\rapttor\yii2feedback\widget\Widget::showButton()` (for an app's "show feedback button" menu option). `Feedback.hide()` hides it.
+- **Main-menu entry (keep one in every app):** `<?= \rapttor\yii2feedback\widget\Widget::link(['class' => 'nav-link']) ?>` renders `<a href="#" data-feedback-open>Feedback</a>` in the visitor's language. It is the way back after the floating button was closed: the dialog has a switch **"Show the feedback button on pages"**. `data-feedback-open="idea"` jumps to a type. JS: `Feedback.open({type: 'error'})`.
+- **The button:** it has a close "x" that asks "Hide the feedback button?" first (cookie `rapttor_fb`). Bring it back with `Feedback.show()` or PHP `\rapttor\yii2feedback\widget\Widget::showButton()` (for an app's "show feedback button" menu option). `Feedback.hide()` hides it.
 - **Sensitive regions:** `data-feedback-hide` removes a region from the screen data; `data-feedback-keep` forces a field in; with `captureMode => 'marked'` only `data-feedback-capture` regions are read. Passwords, hidden and file fields are never read; fields named like `pass`, `token`, `secret`, `card`, `cvv`, `iban`, `csrf` and card-like numbers are always masked.
 - **Accounts:** `Yii::$app->feedback->anonymiseProfile($id)` (keeps the feedback, removes the person and the screen data) or `deleteProfile($id)`; data export: `->export('profile', $id)`.
 - **Events:** `Feedback::EVENT_CREATED`, `EVENT_STATUS`, `EVENT_REPORT` (a `report` was sent), with a `FeedbackEvent`.
 - **Inbox reply:** goes through `Yii::$app->mailer` in the sender's language, so Postar is used when `MAIL_DSN` is `postar://...` (see `rapttor/yii2-postar`: use `reply_to` when sending from a `postar.vip` address). No reply text promises a reply time.
+
+## Without Yii: HTML, jQuery, Vue, React, web component
+
+The widget is plain DOM, so it also runs in pages and apps that have no PHP or no Yii. Load the stylesheet and the script (from `src/widget/assets/`), then start it:
+
+```html
+<link rel="stylesheet" href="feedback.css">
+<script src="feedback.js"></script>
+<script>
+  Feedback.init({
+    lang: 'en',
+    selector: true,                       // language dropdown in the dialog
+    i18nUrl: '/path/to/i18n',             // the 22 language files (i18n/<lang>.json); without it the dialog is English
+    submitUrl: '/api/feedback',           // POST JSON goes here; or handle it yourself:
+    onSubmit: (payload) => fetch('/my/endpoint', { method: 'POST', body: JSON.stringify(payload) })   // return a Promise
+  });
+</script>
+<a href="#" data-feedback-open>Feedback</a>
+```
+
+`Feedback.init(options)` restarts the widget with new options, `Feedback.destroy()` removes it (call it when a single page app component unmounts). Importing the file on a server (Node, SSR) is safe and does nothing.
+The English texts, the default types and the 22 language files are generated from the PHP message files: `php tools/export-i18n.php` (a test fails when they are out of date).
+
+| Option | Default | Meaning |
+|---|---|---|
+| `submitUrl` | | where the JSON payload is POSTed (needs a server that stores it; with the Yii extension that is `feedback/submit`) |
+| `onSubmit(payload)` | | your own handler instead of `submitUrl`; return a Promise, reject (optionally with `{code}`) to show an error |
+| `configUrl` | | the Yii extension's `feedback/config` (texts, types, token, proof of work come from the server); without it everything is built in the browser |
+| `i18nUrl` | | folder with the `<lang>.json` files; `strings` overrides single texts |
+| `lang`, `languages`, `selector` | page `lang`, all 22, `false` | dialog language; `selector: true` shows the language dropdown |
+| `types`, `only` | the four defaults, all | custom types (same shape as in the PHP config) or `only: ['error', 'idea']` |
+| `signedIn`, `email` | `false`, `''` | `signedIn: true` hides the email field; `email` prefills it |
+| `route`, `release`, `extra` | page path, `''` | sent with the payload (`extra` may be an object or a function) |
+| `snapshot` | `true` | `false` removes the "include what is on my screen" option |
+| `captureMode`, `maskEmails` | `'all'`, `false` | as in the PHP config |
+| `button`, `hidden`, `cookie`, `label`, `closeLabel` | `true`, `false`, `'rapttor_fb'` | the floating button (`button: false` = links and `Feedback.open()` only) |
+| `csrf`, `csrfHeader`, `credentials`, `headers` | meta `csrf-token`, `X-CSRF-Token`, `'same-origin'` | for your own endpoint |
+| `on` | | `{ open, close, sent, error }` callbacks; the same events fire on `document` as `rapttor-feedback:<name>` |
+
+The payload your server receives is the one in `src/Feedback.php::submit()` (`type`, `subtype`, `message`, `rating`, `email`, `lang`, `route`, `url`, `tech`, `context`, `snapshot_consent`, `snapshot_parts`, `snapshot`). **Whatever stores it must treat it as untrusted** (see `Sanitizer`) and must only keep `snapshot` when `snapshot_consent` is `1`.
+
+Examples (run them with `node examples/serve.mjs`, then open http://localhost:8099/examples/):
+
+| Example | Files |
+|---|---|
+| Plain HTML, no server | `examples/plain.html` |
+| Data attributes only | `examples/data-attributes.html` |
+| Web component `<rapttor-feedback>` | `examples/web-component.html`, `src/widget/assets/rapttor-feedback-element.js` |
+| jQuery `$.feedback()` / `$(el).feedback()` | `examples/jquery.html`, `src/widget/assets/jquery.rapttor-feedback.js` |
+| Vue 3 | `examples/vue.html`; for a build setup `examples/vue/FeedbackWidget.vue`, `examples/vue/useFeedback.js` |
+| React | `examples/react.html`; for a build setup `examples/react/FeedbackWidget.jsx` |
+| Svelte, Angular, Next.js, Nuxt, Alpine | `examples/other-frameworks.md` (snippets, not run) |
+
+The five pages were run in a browser (including language switching, `onSubmit`, events and cleanup on unmount; React in StrictMode). The `.vue` and `.jsx` files are not compiled here: they contain the same logic as the pages that were run.
+
+## Colours
+
+The widget looks like the page it is on. On open it reads the page's background, text colour and brand colour (a theme variable such as `--bs-primary`, `--primary`, `--color-primary`, `--accent`, else the colour of the links) and picks a readable text colour for buttons, so it follows light/dark themes and theme switches. Borders and muted text are mixed from those. To set colours yourself, define any of these on `:root` (they win over everything): `--rf-bg`, `--rf-fg`, `--rf-accent`, `--rf-accent-fg`, `--rf-muted`, `--rf-border`, `--rf-danger`, `--rf-radius`, `--rf-font`. `siteColors => false` (JS: `siteColors: false`, web component: `no-site-colors`) turns the reading off.
 
 ## Security and privacy in short
 

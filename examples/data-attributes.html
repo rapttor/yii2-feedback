@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data attributes + your own endpoint</title>
+<link rel="stylesheet" href="../src/widget/assets/feedback.css">
+<link rel="stylesheet" href="assets/demo.css">
+</head><body>
+<nav><a href="index.html">&larr; all examples</a></nav>
+<h1>Data attributes + your own endpoint</h1>
+<p class="lead">No JavaScript of your own: one element with <code>data-*</code> attributes. Needs <code>node examples/serve.mjs</code> (the page posts to <code>/api/feedback</code>).</p>
+<div id="rapttor-feedback" data-submit="/api/feedback" data-lang="de" data-selector="1" data-i18n-url="../src/widget/assets/i18n" data-signed-in="0"></div>
+  <p><a href="#" data-feedback-open>Feedback</a></p>
+  <h2>Something on the page</h2>
+  <p class="alert" role="alert">Order form: please check the highlighted fields.</p>
+  <form id="order-form" onsubmit="return false">
+    <label>Name <input type="text" name="name" value="Ada Lovelace"></label>
+    <label>Card number (always masked) <input type="text" name="card_number" value="4111 1111 1111 1111"></label>
+    <label>Password (never read) <input type="password" name="pw" value="secret"></label>
+  </form>
+  <h3>Orders</h3>
+  <table><thead><tr><th>#</th><th>Item</th><th>Total</th></tr></thead><tbody>
+    <tr><td>1001</td><td>Notebook</td><td>12.00</td></tr><tr><td>1002</td><td>Pen set</td><td>7.50</td></tr></tbody></table>
+<div class="log"><strong>What the page received</strong> (your <code>onSubmit</code> gets this object):<pre id="log">nothing yet: open the Feedback button, write a message and send</pre></div>
+<script src="../src/widget/assets/feedback.js"></script>
+<script>
+  function show(p) { document.getElementById('log').textContent = JSON.stringify(p, null, 2); }
+  document.addEventListener('rapttor-feedback:sent', function () {
+    fetch('/api/received').then(function (r) { return r.json(); }).then(function (all) { show(all[all.length - 1]); });
+  });
+</script>
+</body></html>

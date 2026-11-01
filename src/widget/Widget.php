@@ -27,6 +27,22 @@ final class Widget extends BaseWidget
         setcookie($name, '', time() - 3600, '/');
     }
 
+    /**
+     * The menu entry that opens the feedback dialog. Every app keeps one in its main menu (or footer): it is how a person who closed the
+     * floating button finds the form again, and the dialog has a switch that brings the button back.
+     *   <?= Widget::link() ?>                      <a href="#" data-feedback-open>Feedback</a>
+     *   <?= Widget::link(['class' => 'nav-link']) ?>
+     */
+    public static function link(array $options = [], ?string $label = null, string $component = 'feedback'): string
+    {
+        /** @var Feedback $f */
+        $f = Yii::$app->get($component);
+        $options['data-feedback-open'] = $options['data-feedback-open'] ?? '';
+        $options['href'] ??= '#';
+
+        return Html::tag('a', Html::encode($label ?? \rapttor\yii2feedback\Messages::t('fab.label', $f->language())), $options);
+    }
+
     public function run(): string
     {
         /** @var Feedback $f */
@@ -53,7 +69,10 @@ final class Widget extends BaseWidget
                 'lang' => $lang,
                 'languages' => json_encode(array_intersect_key(Languages::NAMES, array_flip(Languages::codes())), JSON_UNESCAPED_UNICODE),
                 'selector' => $selector ? '1' : '0',
-                'hidden' => !empty($pref['h']) || $f->routeHidden($route) ? '1' : '0',
+                'hidden' => !empty($pref['h']) ? '1' : '0',
+                'route-hidden' => $f->routeHidden($route) ? '1' : '0',
+                'confirm-hide' => $f->confirmHide ? '1' : '0',
+                'site-colors' => $f->siteColors ? '1' : '0',
                 'cookie' => $f->cookie,
                 'csrf-param' => Yii::$app->request->csrfParam,
                 'csrf' => Yii::$app->request->getCsrfToken(),

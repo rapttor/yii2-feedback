@@ -307,12 +307,32 @@ final class FeedbackTest extends TestCase
         }
     }
 
+    public function testGeneratedJsonAndInlineDefaultsAreInSync(): void
+    {
+        exec('php ' . escapeshellarg(dirname(__DIR__) . '/tools/export-i18n.php') . ' --check 2>&1', $out, $code);
+        $this->assertSame(0, $code, "run: php tools/export-i18n.php\n" . implode("\n", $out));
+        foreach (Languages::codes() as $code) {
+            $this->assertFileExists(dirname(__DIR__) . "/src/widget/assets/i18n/$code.json");
+        }
+    }
+
     public function testBalkanTextsHaveNoBannedNationalMarkers(): void
     {
         $t = implode(' ', require dirname(__DIR__) . '/src/messages/sh.php');
         foreach (['datoteka', 'sustav', 'otpremam', 'učitavam', 'šaljem'] as $bad) {
             $this->assertStringNotContainsStringIgnoringCase($bad, $t, $bad);
         }
+    }
+
+    public function testMenuLinkHelperIsTranslatedAndOpensTheDialog(): void
+    {
+        $f = $this->fb(['languageResolver' => fn () => 'sv']);
+        $a = \rapttor\yii2feedback\widget\Widget::link(['class' => 'nav-link']);
+        $this->assertStringContainsString('data-feedback-open', $a);
+        $this->assertStringContainsString('class="nav-link"', $a);
+        $this->assertStringContainsString('>' . \rapttor\yii2feedback\Messages::t('fab.label', 'sv') . '</a>', $a);
+        $this->assertStringContainsString('>Mi opinión</a>', \rapttor\yii2feedback\widget\Widget::link([], 'Mi opinión'));
+        $this->assertStringNotContainsString('<script', \rapttor\yii2feedback\widget\Widget::link([], '<script>x</script>'), 'the label is encoded');
     }
 
     public function testHiddenRoutesOnlyHideTheButton(): void

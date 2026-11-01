@@ -4,6 +4,11 @@
 return [
     'fab.label' => 'Opinie',
     'fab.close' => 'Ukryj przycisk opinii',
+    'fab.confirm' => 'Ukryć przycisk opinii?',
+    'fab.confirm.hint' => 'Możesz go przywrócić w dowolnym momencie w opcji Opinie w menu.',
+    'fab.confirm.yes' => 'Ukryj',
+    'fab.confirm.no' => 'Zostaw',
+    'fab.toggle' => 'Pokazuj przycisk opinii na stronach',
     'dialog.title' => 'Podziel się z nami opinią',
     'dialog.close' => 'Zamknij',
     'dialog.back' => 'Wstecz',
